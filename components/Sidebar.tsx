@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare } from "lucide-react";
+import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare, LogOut } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
@@ -18,6 +19,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-warm border-r border-warm flex flex-col shadow-sm">
@@ -49,8 +51,18 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 text-center">
-        <p className="font-handwriting text-brown-light text-lg">gemaakt met liefde 🌿</p>
+      <div className="p-4 border-t border-warm flex items-center justify-between">
+        <div>
+          <p className="font-handwriting text-brown text-lg">{session?.user?.name ?? ""}</p>
+          <p className="text-brown-light text-xs font-body">gemaakt met liefde 🌿</p>
+        </div>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="p-2 rounded-xl text-brown-light hover:text-rose hover:bg-rose-light/30 transition-colors"
+          title="Uitloggen"
+        >
+          <LogOut size={16} />
+        </button>
       </div>
     </aside>
   );
