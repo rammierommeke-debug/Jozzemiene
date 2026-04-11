@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare } from "lucide-react";
+import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare, Music } from "lucide-react";
 import MusicPlayer from "./MusicPlayer";
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/kalender", icon: Calendar, label: "Kalender" },
   { href: "/taken", icon: CheckSquare, label: "Taken" },
   { href: "/fotos", icon: Image, label: "Foto's" },
+  { href: "/muziek", icon: Music, label: "Muziek" },
   { href: "/sparen", icon: PiggyBank, label: "Sparen" },
   { href: "/ideetjes", icon: Lightbulb, label: "Ideetjes" },
   { href: "/menu", icon: UtensilsCrossed, label: "Menu" },
