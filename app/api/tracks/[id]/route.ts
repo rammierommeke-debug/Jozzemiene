@@ -1,17 +1,33 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { readTracksFile, writeTracksFile } from "@/lib/tracks";
+import { unlink } from "fs/promises";
+import path from "path";
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await supabase.from("tracks").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const tracks = await readTracksFile();
+  const track = tracks.find((t) => t.id === id);
+
+  if (track) {
+    // Delete the audio file from disk
+    try {
+      const filepath = path.join(process.cwd(), "public", track.url);
+      await unlink(filepath);
+    } catch {
+      // File may already be gone, continue
+    }
+  }
+
+  const updated = tracks.filter((t) => t.id !== id);
+  await writeTracksFile(updated);
   return NextResponse.json({ ok: true });
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
-  const { data, error } = await supabase.from("tracks").update(body).eq("id", id).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const tracks = await readTracksFile();
+  const updated = tracks.map((t) => t.id === id ? { ...t, ...body } : t);
+  await writeTracksFile(updated);
+  return NextResponse.json(updated.find((t) => t.id === id));
 }
