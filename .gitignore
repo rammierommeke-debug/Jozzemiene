@@ -3,3 +3,11 @@ node_modules/
 .next/
 .env.local
 tsconfig.tsbuildinfo
+
+# Audio files (too large for git, stored locally on server)
+public/music/*.mp3
+public/music/*.wav
+public/music/*.flac
+public/music/*.m4a
+public/music/*.ogg
+public/music/*.aac

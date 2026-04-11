@@ -28,28 +28,12 @@ export default function MusicPlayer() {
     if (!file) return;
     setUploading(true);
 
-    const ext = file.name.split(".").pop() ?? "mp3";
-    // 1. Presign
-    const presignRes = await fetch("/api/photos/presign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ext }),
-    });
-    const { signedUrl, filename, error: presignError } = await presignRes.json();
-    if (presignError || !signedUrl) { setUploading(false); return; }
-
-    // 2. Upload to Supabase Storage
-    await fetch(signedUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-
-    // 3. Save track
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploads/${filename}`;
     const name = file.name.replace(/\.[^.]+$/, "");
-    await fetch("/api/tracks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, url: publicUrl }),
-    });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("name", name);
+
+    await fetch("/api/tracks", { method: "POST", body: formData });
 
     await fetchTracks();
     setUploading(false);

@@ -42,26 +42,12 @@ export default function MuziekPage() {
     if (!file) return;
     setUploading(true);
 
-    const ext = file.name.split(".").pop() ?? "mp3";
-    const presignRes = await fetch("/api/photos/presign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ext }),
-    });
-    const { signedUrl, filename, error: presignError } = await presignRes.json();
-    if (presignError || !signedUrl) { setUploading(false); return; }
-
-    await fetch(signedUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploads/${filename}`;
     const name = file.name.replace(/\.[^.]+$/, "");
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("name", name);
 
-    await fetch("/api/tracks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, url: publicUrl }),
-    });
+    await fetch("/api/tracks", { method: "POST", body: formData });
 
     await fetchTracks();
     setUploading(false);
