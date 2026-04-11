@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Heart, Sun, Calendar, Image, PiggyBank, Lightbulb, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
 
@@ -44,18 +47,31 @@ const quickLinks = [
   },
 ];
 
-export default function HomePage() {
-  const now = new Date();
-  const hour = now.getHours();
-  const greeting =
-    hour < 6 ? "Goeienacht" : hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+function getGreeting(hour: number) {
+  if (hour < 6) return "Goeienacht";
+  if (hour < 12) return "Goeiemorgen";
+  if (hour < 18) return "Goeiemiddag";
+  return "Goeieavond";
+}
 
-  const dateStr = now.toLocaleDateString("nl-NL", {
+export default function HomePage() {
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const hour = now?.getHours() ?? 12;
+  const greeting = getGreeting(hour);
+
+  const dateStr = now?.toLocaleDateString("nl-NL", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
-  });
+  }) ?? "";
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -63,7 +79,7 @@ export default function HomePage() {
         <div className="flex items-center gap-3 mb-2">
           <Sun className="text-terracotta" size={28} />
           <h1 className="font-display text-4xl text-brown">
-            {greeting}, mensen
+            {greeting}, Emma en Roel
           </h1>
           <Heart className="text-rose fill-rose" size={24} />
         </div>
