@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fdf6ec;
+  --color-warm: #f5e6d0;
+  --color-terracotta: #c2714f;
+  --color-terracotta-light: #d9896a;
+  --color-sage: #7a9e7e;
+  --color-sage-light: #a8c4aa;
+  --color-rose: #d4848a;
+  --color-rose-light: #e8b4b8;
+  --color-brown: #6b4c3b;
+  --color-brown-light: #9a7060;
+
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Lato", system-ui, sans-serif;
+  --font-handwriting: "Caveat", cursive;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-cream);
+    color: var(--color-brown);
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-handwriting {
+    font-family: var(--font-handwriting);
+  }
+  .bg-cream { background-color: var(--color-cream); }
+  .bg-warm { background-color: var(--color-warm); }
+  .bg-terracotta { background-color: var(--color-terracotta); }
+  .bg-terracotta-light { background-color: var(--color-terracotta-light); }
+  .bg-sage { background-color: var(--color-sage); }
+  .bg-sage-light { background-color: var(--color-sage-light); }
+  .bg-rose { background-color: var(--color-rose); }
+  .bg-rose-light { background-color: var(--color-rose-light); }
+  .text-terracotta { color: var(--color-terracotta); }
+  .text-sage { color: var(--color-sage); }
+  .text-rose { color: var(--color-rose); }
+  .text-brown { color: var(--color-brown); }
+  .text-brown-light { color: var(--color-brown-light); }
+  .border-terracotta { border-color: var(--color-terracotta); }
+  .border-sage { border-color: var(--color-sage); }
+  .border-warm { border-color: var(--color-warm); }
+}
