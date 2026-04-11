@@ -36,7 +36,10 @@ function weekLabel(monday: Date): string {
   return `Week ${weekNum} • ${format(monday, "d MMM", { locale: nl })} – ${format(sunday, "d MMM yyyy", { locale: nl })}`;
 }
 
+type Tab = "weekmenu" | "fotos";
+
 export default function MenuPage() {
+  const [tab, setTab] = useState<Tab>("weekmenu");
   const [weekStart, setWeekStart] = useState<Date>(() => startOfISOWeek(new Date()));
   const [meals, setMeals] = useState<Meal[]>([]);
   const [adding, setAdding] = useState<{ day: string; slot: Meal["slot"] } | null>(null);
@@ -146,6 +149,23 @@ export default function MenuPage() {
         <h1 className="font-display text-3xl text-brown">Weekmenu</h1>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setTab("weekmenu")}
+          className={`px-5 py-2 rounded-2xl font-body text-sm transition-colors ${tab === "weekmenu" ? "bg-brown text-cream" : "bg-warm text-brown-light hover:text-brown"}`}
+        >
+          Weekmenu
+        </button>
+        <button
+          onClick={() => setTab("fotos")}
+          className={`px-5 py-2 rounded-2xl font-body text-sm transition-colors flex items-center gap-2 ${tab === "fotos" ? "bg-brown text-cream" : "bg-warm text-brown-light hover:text-brown"}`}
+        >
+          <Camera size={14} />
+          Foto&apos;s toevoegen
+        </button>
+      </div>
+
       {/* Week navigator */}
       <div className="flex items-center justify-center gap-4 mb-8 bg-warm rounded-3xl px-6 py-4">
         <button
@@ -170,7 +190,7 @@ export default function MenuPage() {
 
       {loading ? (
         <p className="text-brown-light text-center mt-10">Laden...</p>
-      ) : (
+      ) : tab === "weekmenu" ? (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -201,7 +221,6 @@ export default function MenuPage() {
                       <td key={day} className="py-2 px-2">
                         {meal ? (
                           <div className="relative rounded-2xl overflow-hidden min-h-[5rem] group">
-                            {/* Photo background */}
                             {meal.photo_url ? (
                               <NextImage
                                 src={meal.photo_url}
@@ -211,14 +230,12 @@ export default function MenuPage() {
                                 sizes="120px"
                               />
                             ) : null}
-                            {/* Content overlay */}
                             <div className={`relative z-10 p-2.5 flex flex-col items-center justify-center min-h-[5rem] ${meal.photo_url ? "bg-brown/50" : "bg-warm"}`}>
                               <span className="text-lg">{meal.emoji}</span>
                               <p className={`text-xs leading-tight mt-0.5 text-center ${meal.photo_url ? "text-cream font-semibold" : "text-brown"}`}>
                                 {meal.name}
                               </p>
                             </div>
-                            {/* Action buttons (on hover) */}
                             <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col">
                               <div className="flex justify-between p-1">
                                 <button
@@ -292,6 +309,77 @@ export default function MenuPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : (
+        /* Foto's tab */
+        <div>
+          {meals.length === 0 ? (
+            <p className="text-brown-light text-center mt-10">Geen gerechten deze week. Voeg eerst gerechten toe via het Weekmenu.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {meals.map((meal) => (
+                <div key={meal.id} className="bg-warm rounded-3xl overflow-hidden flex flex-col">
+                  {/* Photo area */}
+                  <div className="relative h-40 bg-cream flex items-center justify-center">
+                    {meal.photo_url ? (
+                      <>
+                        <NextImage
+                          src={meal.photo_url}
+                          alt={meal.name}
+                          fill
+                          className="object-cover"
+                          sizes="200px"
+                        />
+                        <button
+                          onClick={() => removePhoto(meal)}
+                          className="absolute top-2 right-2 z-10 bg-brown/80 text-cream rounded-full p-1 hover:bg-brown"
+                          title="Foto verwijderen"
+                        >
+                          <X size={12} />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => openPhotoUpload(meal)}
+                        disabled={photoUploading === meal.id}
+                        className="flex flex-col items-center gap-2 text-brown-light hover:text-brown transition-colors"
+                      >
+                        {photoUploading === meal.id ? (
+                          <span className="text-sm">Uploaden...</span>
+                        ) : (
+                          <>
+                            <Camera size={28} />
+                            <span className="text-xs">Foto toevoegen</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  {/* Meal info */}
+                  <div className="p-3 flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base">{meal.emoji}</span>
+                      <p className="text-sm font-semibold text-brown truncate">{meal.name}</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs capitalize px-2 py-0.5 rounded-full ${SLOT_COLORS[meal.slot]}`}>{meal.slot}</span>
+                      <span className="text-xs text-brown-light">{meal.day.slice(0, 2)}</span>
+                    </div>
+                    {meal.photo_url && (
+                      <button
+                        onClick={() => openPhotoUpload(meal)}
+                        disabled={photoUploading === meal.id}
+                        className="mt-1 text-xs text-brown-light hover:text-brown flex items-center gap-1 transition-colors"
+                      >
+                        <Camera size={11} />
+                        {photoUploading === meal.id ? "Uploaden..." : "Foto vervangen"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
