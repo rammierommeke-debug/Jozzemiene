@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare, Music } from "lucide-react";
-import MusicPlayer from "./MusicPlayer";
+import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare } from "lucide-react";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/kalender", icon: Calendar, label: "Kalender" },
   { href: "/taken", icon: CheckSquare, label: "Taken" },
   { href: "/fotos", icon: Image, label: "Foto's" },
-  { href: "/muziek", icon: Music, label: "Muziek" },
   { href: "/sparen", icon: PiggyBank, label: "Sparen" },
   { href: "/ideetjes", icon: Lightbulb, label: "Ideetjes" },
   { href: "/menu", icon: UtensilsCrossed, label: "Menu" },
@@ -50,8 +48,6 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      <MusicPlayer />
 
       <div className="p-4 text-center">
         <p className="font-handwriting text-brown-light text-lg">gemaakt met liefde 🌿</p>
