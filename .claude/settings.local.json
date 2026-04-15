@@ -9,7 +9,10 @@
       "Bash(git checkout:*)",
       "Bash(git stash:*)",
       "Bash(npm uninstall:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "WebFetch(domain:jozzemiene.vercel.app)",
+      "Bash(npx vercel:*)",
+      "Bash(npx next:*)"
     ]
   }
 }
