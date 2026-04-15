@@ -256,7 +256,7 @@ export default function KalenderPage() {
                               )}
                             </div>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${person.color}`}>{ev.person}</span>
-                            <button onClick={() => deleteEvent(ev.id)} className="opacity-0 group-hover:opacity-100 text-rose transition-opacity shrink-0">
+                            <button onClick={() => deleteEvent(ev.id)} className="text-brown-light hover:text-rose transition-colors shrink-0">
                               <Trash2 size={13} />
                             </button>
                           </li>
