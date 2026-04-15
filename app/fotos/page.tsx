@@ -179,7 +179,7 @@ export default function FotosPage() {
   const unassigned = photos.filter((p) => !p.album_id);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto pt-14 md:pt-0">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <Image className="text-rose" size={28} />

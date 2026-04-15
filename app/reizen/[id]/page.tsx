@@ -71,7 +71,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
   if (!trip) return <div className="text-center mt-20 text-brown-light">Reis niet gevonden.</div>;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pt-14 md:pt-0">
       {/* Back */}
       <Link href="/reizen" className="inline-flex items-center gap-2 text-brown-light hover:text-terracotta transition-colors mb-6 text-sm font-semibold">
         <ArrowLeft size={16} /> Terug naar reizen

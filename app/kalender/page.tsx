@@ -124,7 +124,7 @@ export default function KalenderPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto pt-14 md:pt-0">
       <div className="flex items-center gap-3 mb-6">
         <Calendar className="text-sage" size={28} />
         <h1 className="font-display text-3xl text-brown">Onze Kalender</h1>

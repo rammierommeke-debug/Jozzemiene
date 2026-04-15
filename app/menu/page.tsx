@@ -139,7 +139,7 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto pt-14 md:pt-0">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <UtensilsCrossed className="text-brown-light" size={28} />

@@ -108,7 +108,7 @@ export default function BerichtjesPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto pt-14 md:pt-0">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <Mail className="text-rose" size={28} />

@@ -73,7 +73,7 @@ export default function IdeetjesPage() {
       : ideas.filter((i) => !i.done && i.category === filter);
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto pt-14 md:pt-0">
       <div className="flex items-center gap-3 mb-8">
         <Lightbulb className="text-terracotta" size={28} />
         <h1 className="font-display text-3xl text-brown">Onze Ideetjes</h1>

@@ -61,7 +61,7 @@ export default function BucketListPage() {
   const overallProgress = total === 0 ? 0 : Math.round((done / total) * 100);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pt-14 md:pt-0">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <Star className="text-terracotta fill-terracotta" size={28} />
