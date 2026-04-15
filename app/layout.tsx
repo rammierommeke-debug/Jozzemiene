@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Playfair_Display, Lato, Caveat } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
-import SessionWrapper from "@/components/SessionWrapper";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -33,12 +32,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfair.variable} ${lato.variable} ${caveat.variable}`}>
       <body className="bg-cream min-h-screen flex">
-        <SessionWrapper>
           <Sidebar />
           <main className="flex-1 ml-64 p-8 min-h-screen">
             {children}
           </main>
-        </SessionWrapper>
       </body>
     </html>
   );
