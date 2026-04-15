@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Plus, Trash2, Upload, MapPin, Wallet, BookOpen, CalendarDays, Check, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Upload, MapPin, Wallet, BookOpen, CalendarDays, Check, Clock, ChevronDown, ChevronUp, Map } from "lucide-react";
 import Link from "next/link";
 import NextImage from "next/image";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { use } from "react";
+import dynamic from "next/dynamic";
+
+const TripMap = dynamic(() => import("@/components/TripMap"), { ssr: false, loading: () => <div className="h-96 bg-warm rounded-3xl animate-pulse" /> });
 
 // --- Types ---
 type Activity = { id: string; time: string; title: string; emoji: string; done: boolean };
 type DayBlock = { type: "day"; date: string; activities: Activity[] };
-type PlaceBlock = { type: "place"; id: string; name: string; emoji: string; category: string; notes: string; done: boolean };
+type PlaceBlock = { type: "place"; id: string; name: string; emoji: string; category: string; notes: string; done: boolean; lat?: number; lng?: number };
 type ExpenseBlock = { type: "expense"; id: string; title: string; amount: number; category: string; emoji: string };
 type TextBlock = { type: "text"; id: string; content: string };
 type PhotoBlock = { type: "photo"; id: string; content: string; caption: string };
@@ -51,6 +54,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
 
   // Plekken state
   const [showPlaceForm, setShowPlaceForm] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [placeForm, setPlaceForm] = useState({ name: "", emoji: "📍", category: PLACE_CATEGORIES[0], notes: "" });
 
   // Budget state
@@ -131,9 +135,15 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
     return trip?.blocks.filter((b) => b.type === "place") as PlaceBlock[] ?? [];
   }
 
-  async function addPlace() {
-    if (!placeForm.name.trim() || !trip) return;
-    const place: PlaceBlock = { type: "place", id: uid(), name: placeForm.name, emoji: placeForm.emoji, category: placeForm.category, notes: placeForm.notes, done: false };
+  async function addPlace(overrides?: { name: string; lat: number; lng: number }) {
+    if (!trip) return;
+    const name = overrides?.name ?? placeForm.name;
+    if (!name.trim()) return;
+    const place: PlaceBlock = {
+      type: "place", id: uid(), name,
+      emoji: placeForm.emoji, category: placeForm.category, notes: placeForm.notes, done: false,
+      lat: overrides?.lat, lng: overrides?.lng,
+    };
     await patchBlocks([...trip.blocks, place]);
     setPlaceForm({ name: "", emoji: "📍", category: PLACE_CATEGORIES[0], notes: "" });
     setShowPlaceForm(false);
@@ -343,11 +353,24 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
       {/* ===== PLEKKEN ===== */}
       {tab === "plekken" && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="flex gap-2 justify-end mb-4">
+            <button onClick={() => setShowMap(!showMap)} className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold transition-colors ${showMap ? "bg-sage text-cream" : "bg-warm text-brown hover:bg-cream border border-warm"}`}>
+              <Map size={16} /> Kaart
+            </button>
             <button onClick={() => setShowPlaceForm(!showPlaceForm)} className="flex items-center gap-2 bg-terracotta text-cream px-4 py-2 rounded-2xl text-sm font-semibold hover:bg-terracotta/80 transition-colors">
-              <Plus size={16} /> Plek toevoegen
+              <Plus size={16} /> Handmatig
             </button>
           </div>
+
+          {showMap && (
+            <div className="mb-5">
+              <TripMap
+                places={places}
+                onAddPlace={(p) => addPlace({ name: p.name, lat: p.lat, lng: p.lng })}
+                coverColor={trip.coverColor}
+              />
+            </div>
+          )}
 
           {showPlaceForm && (
             <div className="bg-warm rounded-3xl p-5 border border-warm mb-5 flex flex-col gap-3">
@@ -362,7 +385,7 @@ export default function TripPage({ params }: { params: Promise<{ id: string }> }
               </div>
               <textarea value={placeForm.notes} onChange={(e) => setPlaceForm({ ...placeForm, notes: e.target.value })} placeholder="Notities (optioneel)..." rows={2} className="bg-cream rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-terracotta resize-none" />
               <div className="flex gap-2">
-                <button onClick={addPlace} className="flex-1 bg-terracotta text-cream rounded-xl py-2 text-sm font-semibold hover:bg-terracotta/80">Toevoegen</button>
+                <button onClick={() => addPlace()} className="flex-1 bg-terracotta text-cream rounded-xl py-2 text-sm font-semibold hover:bg-terracotta/80">Toevoegen</button>
                 <button onClick={() => setShowPlaceForm(false)} className="flex-1 bg-cream text-brown-light rounded-xl py-2 text-sm hover:bg-warm">Annuleren</button>
               </div>
             </div>
