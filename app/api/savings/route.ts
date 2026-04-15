@@ -10,7 +10,12 @@ export async function GET() {
 export async function POST(req: Request) {
   const body = await req.json();
   const { data, error } = await supabase.from("savings").insert({
-    name: body.name, emoji: body.emoji || "🎯", target: body.target, saved: 0,
+    name: body.name,
+    emoji: body.emoji || "🎯",
+    target: body.target,
+    saved: 0,
+    date_from: body.date_from || null,
+    date_to: body.date_to || null,
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
