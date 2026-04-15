@@ -10,7 +10,9 @@
       "Bash(git cherry-pick:*)",
       "WebFetch(domain:jozzemiene.vercel.app)",
       "Bash(git merge:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx next:*)"
     ]
   }
 }
