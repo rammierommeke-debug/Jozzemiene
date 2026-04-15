@@ -1,64 +1,25 @@
 "use client";
 
-import { Heart, Sun, Calendar, Image, PiggyBank, Lightbulb, UtensilsCrossed, StickyNote, Plus, X } from "lucide-react";
+import { Heart, Sun, Calendar, Image, PiggyBank, Lightbulb, UtensilsCrossed, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
 const quickLinks = [
-  {
-    href: "/kalender",
-    icon: Calendar,
-    label: "Kalender",
-    desc: "Komende afspraken & plannen",
-    color: "bg-sage-light",
-    iconColor: "text-sage",
-  },
-  {
-    href: "/fotos",
-    icon: Image,
-    label: "Foto's",
-    desc: "Onze gedeelde herinneringen",
-    color: "bg-rose-light",
-    iconColor: "text-rose",
-  },
-  {
-    href: "/sparen",
-    icon: PiggyBank,
-    label: "Sparen",
-    desc: "Onze spaardoelen",
-    color: "bg-warm",
-    iconColor: "text-brown-light",
-  },
-  {
-    href: "/ideetjes",
-    icon: Lightbulb,
-    label: "Ideetjes",
-    desc: "Dingen die we willen doen",
-    color: "bg-terracotta-light/30",
-    iconColor: "text-terracotta",
-  },
-  {
-    href: "/menu",
-    icon: UtensilsCrossed,
-    label: "Menu",
-    desc: "Het menu van deze week",
-    color: "bg-sage-light/40",
-    iconColor: "text-sage",
-  },
+  { href: "/kalender", icon: Calendar, label: "Kalender", desc: "Komende afspraken & plannen", color: "bg-sage-light", iconColor: "text-sage" },
+  { href: "/fotos", icon: Image, label: "Foto's", desc: "Onze gedeelde herinneringen", color: "bg-rose-light", iconColor: "text-rose" },
+  { href: "/sparen", icon: PiggyBank, label: "Sparen", desc: "Onze spaardoelen", color: "bg-warm", iconColor: "text-brown-light" },
+  { href: "/ideetjes", icon: Lightbulb, label: "Ideetjes", desc: "Dingen die we willen doen", color: "bg-terracotta-light/30", iconColor: "text-terracotta" },
+  { href: "/menu", icon: UtensilsCrossed, label: "Menu", desc: "Het menu van deze week", color: "bg-sage-light/40", iconColor: "text-sage" },
 ];
 
 const NOTE_COLORS = [
-  { label: "Geel", value: "yellow", bg: "bg-yellow-100", border: "border-yellow-300", text: "text-yellow-900" },
-  { label: "Roze", value: "pink", bg: "bg-rose-100", border: "border-rose-300", text: "text-rose-900" },
-  { label: "Groen", value: "green", bg: "bg-sage-light", border: "border-sage", text: "text-sage" },
-  { label: "Blauw", value: "blue", bg: "bg-blue-100", border: "border-blue-300", text: "text-blue-900" },
+  { value: "geel",     bg: "#fef9c3", border: "#fde047" },
+  { value: "roze",     bg: "#fce7f3", border: "#f9a8d4" },
+  { value: "groen",    bg: "#dcfce7", border: "#86efac" },
+  { value: "blauw",    bg: "#dbeafe", border: "#93c5fd" },
 ];
 
-type Note = { id: string; text: string; color: string; created_at: string };
-
-function getNoteStyle(color: string) {
-  return NOTE_COLORS.find((c) => c.value === color) ?? NOTE_COLORS[0];
-}
+type Note = { id: string; text: string; color: string };
 
 export default function HomePage() {
   const now = new Date();
@@ -67,47 +28,48 @@ export default function HomePage() {
     hour < 6 ? "Goeienacht" : hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
 
   const dateStr = now.toLocaleDateString("nl-NL", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [newText, setNewText] = useState("");
-  const [newColor, setNewColor] = useState("yellow");
+  const [newColor, setNewColor] = useState("geel");
   const [adding, setAdding] = useState(false);
 
+  // Laad notities uit localStorage
   useEffect(() => {
-    fetch("/api/notes").then((r) => r.json()).then((d) => setNotes(Array.isArray(d) ? d : []));
+    try {
+      const saved = localStorage.getItem("jozzemiene-notes");
+      if (saved) setNotes(JSON.parse(saved));
+    } catch {}
   }, []);
 
-  async function addNote() {
+  // Sla op bij elke wijziging
+  function saveNotes(updated: Note[]) {
+    setNotes(updated);
+    try { localStorage.setItem("jozzemiene-notes", JSON.stringify(updated)); } catch {}
+  }
+
+  function addNote() {
     if (!newText.trim()) return;
-    const res = await fetch("/api/notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: newText, color: newColor }),
-    });
-    const created = await res.json();
-    setNotes((prev) => [created, ...prev]);
+    const note: Note = { id: Date.now().toString(), text: newText.trim(), color: newColor };
+    saveNotes([note, ...notes]);
     setNewText("");
     setAdding(false);
   }
 
-  async function deleteNote(id: string) {
-    await fetch(`/api/notes/${id}`, { method: "DELETE" });
-    setNotes((prev) => prev.filter((n) => n.id !== id));
+  function deleteNote(id: string) {
+    saveNotes(notes.filter((n) => n.id !== id));
   }
+
+  const colorStyle = NOTE_COLORS.find((c) => c.value === newColor) ?? NOTE_COLORS[0];
 
   return (
     <div className="max-w-3xl mx-auto pt-14 md:pt-0">
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-2">
           <Sun className="text-terracotta" size={28} />
-          <h1 className="font-display text-4xl text-brown">
-            {greeting}, mensen
-          </h1>
+          <h1 className="font-display text-4xl text-brown">{greeting}, mensen</h1>
           <Heart className="text-rose fill-rose" size={24} />
         </div>
         <p className="font-handwriting text-xl text-brown-light ml-1 capitalize">{dateStr}</p>
@@ -141,25 +103,30 @@ export default function HomePage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <StickyNote className="text-yellow-600" size={22} />
+            <span style={{ fontSize: 22 }}>📝</span>
             <h2 className="font-display text-2xl text-brown">Niet vergeten</h2>
           </div>
           <button
             onClick={() => setAdding(!adding)}
-            className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-2xl text-sm font-semibold hover:bg-yellow-200 transition-colors border border-yellow-300"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-2xl text-sm font-semibold transition-colors border border-warm bg-warm text-brown hover:bg-cream"
           >
             <Plus size={14} /> Notitie
           </button>
         </div>
 
         {adding && (
-          <div className="bg-yellow-50 border border-yellow-300 rounded-3xl p-4 mb-4">
+          <div
+            className="rounded-3xl p-4 mb-4 border-2"
+            style={{ backgroundColor: colorStyle.bg, borderColor: colorStyle.border }}
+          >
+            {/* Kleurkiezer */}
             <div className="flex gap-2 mb-3">
               {NOTE_COLORS.map((c) => (
                 <button
                   key={c.value}
                   onClick={() => setNewColor(c.value)}
-                  className={`w-7 h-7 rounded-full border-2 ${c.bg} ${newColor === c.value ? "border-brown scale-110" : "border-transparent"} transition-all`}
+                  style={{ backgroundColor: c.bg, borderColor: newColor === c.value ? "#6b4c3b" : c.border }}
+                  className="w-7 h-7 rounded-full border-2 transition-all"
                 />
               ))}
             </div>
@@ -170,27 +137,46 @@ export default function HomePage() {
               placeholder="bv. De buurman komt morgen de boor terugbrengen"
               autoFocus
               rows={2}
-              className="w-full bg-transparent focus:outline-none resize-none font-handwriting text-lg text-brown"
+              style={{ color: "#6b4c3b", backgroundColor: "transparent" }}
+              className="w-full focus:outline-none resize-none font-handwriting text-lg w-full"
             />
             <div className="flex gap-2 mt-2">
-              <button onClick={addNote} className="flex-1 bg-yellow-300 text-yellow-900 rounded-xl py-1.5 text-sm font-semibold hover:bg-yellow-400 transition-colors">Plakken</button>
-              <button onClick={() => { setAdding(false); setNewText(""); }} className="flex-1 bg-warm text-brown-light rounded-xl py-1.5 text-sm hover:bg-warm/80">Annuleren</button>
+              <button
+                onClick={addNote}
+                style={{ backgroundColor: colorStyle.border, color: "#6b4c3b" }}
+                className="flex-1 rounded-xl py-1.5 text-sm font-semibold transition-opacity hover:opacity-80"
+              >
+                Plakken
+              </button>
+              <button
+                onClick={() => { setAdding(false); setNewText(""); }}
+                className="flex-1 bg-warm text-brown-light rounded-xl py-1.5 text-sm hover:bg-cream transition-colors"
+              >
+                Annuleren
+              </button>
             </div>
           </div>
         )}
 
         {notes.length === 0 && !adding ? (
-          <p className="text-brown-light text-sm font-handwriting text-lg">Niets te onthouden — geniet ervan! 🌿</p>
+          <p className="text-brown-light font-handwriting text-lg">Niets te onthouden — geniet ervan! 🌿</p>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {notes.map((note) => {
-              const style = getNoteStyle(note.color);
+              const style = NOTE_COLORS.find((c) => c.value === note.color) ?? NOTE_COLORS[0];
               return (
-                <div key={note.id} className={`${style.bg} ${style.border} border rounded-2xl p-4 relative group shadow-sm`}>
-                  <p className={`font-handwriting text-lg ${style.text} leading-snug`} style={{ whiteSpace: "pre-wrap" }}>{note.text}</p>
+                <div
+                  key={note.id}
+                  className="rounded-2xl p-4 relative shadow-sm"
+                  style={{ backgroundColor: style.bg, border: `1.5px solid ${style.border}` }}
+                >
+                  <p className="font-handwriting text-lg leading-snug pr-5" style={{ color: "#6b4c3b", whiteSpace: "pre-wrap" }}>
+                    {note.text}
+                  </p>
                   <button
                     onClick={() => deleteNote(note.id)}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-brown/40 hover:text-rose"
+                    className="absolute top-2 right-2 transition-opacity"
+                    style={{ color: "#9a7060" }}
                   >
                     <X size={14} />
                   </button>
