@@ -73,22 +73,24 @@ export default function Sidebar() {
       </div>
 
       {/* Mobiele bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-warm border-t border-warm flex items-center justify-around px-2 py-2 safe-area-bottom">
-        {navItems.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href;
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${
-                active ? "text-terracotta" : "text-brown-light"
-              }`}
-            >
-              <Icon size={20} className="shrink-0" />
-              <span className="text-[9px] font-semibold leading-none">{label.split(" ")[0]}</span>
-            </Link>
-          );
-        })}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-warm border-t border-warm">
+        <div className="flex items-center overflow-x-auto scrollbar-hide px-2 py-2" style={{ scrollbarWidth: "none" }}>
+          {navItems.map(({ href, icon: Icon, label }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all shrink-0 ${
+                  active ? "text-terracotta" : "text-brown-light"
+                }`}
+              >
+                <Icon size={20} className="shrink-0" />
+                <span className="text-[9px] font-semibold leading-none whitespace-nowrap">{label.split(" ")[0]}</span>
+              </Link>
+            );
+          })}
+        </div>
       </nav>
     </>
   );
