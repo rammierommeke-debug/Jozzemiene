@@ -170,7 +170,7 @@ export default function HomePage() {
               placeholder="bv. De buurman komt morgen de boor terugbrengen"
               autoFocus
               rows={2}
-              className="w-full bg-transparent text-sm text-yellow-900 focus:outline-none resize-none placeholder-yellow-600/60 font-handwriting text-lg"
+              className="w-full bg-transparent focus:outline-none resize-none font-handwriting text-lg text-brown"
             />
             <div className="flex gap-2 mt-2">
               <button onClick={addNote} className="flex-1 bg-yellow-300 text-yellow-900 rounded-xl py-1.5 text-sm font-semibold hover:bg-yellow-400 transition-colors">Plakken</button>
