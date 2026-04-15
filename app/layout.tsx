@@ -33,7 +33,7 @@ export default function RootLayout({
     <html lang="en" className={`${playfair.variable} ${lato.variable} ${caveat.variable}`}>
       <body className="bg-cream min-h-screen flex">
           <Sidebar />
-          <main className="flex-1 ml-64 p-8 min-h-screen">
+          <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen pb-24 md:pb-8">
             {children}
           </main>
       </body>

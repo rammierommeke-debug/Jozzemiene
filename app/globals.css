@@ -22,6 +22,11 @@
     background-color: var(--color-cream);
     color: var(--color-brown);
     font-family: var(--font-body);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3 {

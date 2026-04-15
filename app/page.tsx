@@ -101,7 +101,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto pt-14 md:pt-0">
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-2">
           <Sun className="text-terracotta" size={28} />
