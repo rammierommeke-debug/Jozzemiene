@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare } from "lucide-react";
+import { Calendar, PiggyBank, Lightbulb, UtensilsCrossed, Home, Heart, Image, Plane, Mail, CheckSquare, Star } from "lucide-react";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
@@ -11,6 +11,7 @@ const navItems = [
   { href: "/fotos", icon: Image, label: "Foto's" },
   { href: "/sparen", icon: PiggyBank, label: "Sparen" },
   { href: "/ideetjes", icon: Lightbulb, label: "Ideetjes" },
+  { href: "/bucketlist", icon: Star, label: "Bucket List" },
   { href: "/menu", icon: UtensilsCrossed, label: "Menu" },
   { href: "/reizen", icon: Plane, label: "Reizen" },
   { href: "/berichtjes", icon: Mail, label: "Lieve berichtjes" },
