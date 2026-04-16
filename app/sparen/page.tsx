@@ -356,7 +356,7 @@ export default function SparenPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9a7060" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#9a7060" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v}`} />
                   <Tooltip
-                    formatter={(value: number) => [`€${value.toFixed(2)}`, "Gespaard"]}
+                    formatter={(value) => [`€${Number(value).toFixed(2)}`, "Gespaard"]}
                     contentStyle={{ background: "#fdf6f0", border: "1px solid #e8d5c4", borderRadius: 12, fontSize: 12 }}
                   />
                   <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
