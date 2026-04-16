@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Paintbrush } from "lucide-react";
+import { Heart, Paintbrush, BookMarked } from "lucide-react";
 import { useTheme } from "@/lib/themeContext";
 import { getIcon } from "@/lib/iconMap";
 
@@ -29,7 +29,10 @@ export default function Sidebar() {
               <Paintbrush size={15} />
             </button>
           </div>
-          <p className="text-brown-light text-xs font-body ml-7">gemaakt met liefde, voor de liefde</p>
+          <div className="flex items-center gap-1.5 ml-7">
+            <BookMarked size={11} className="text-brown-light" />
+            <p className="text-brown-light text-xs font-body">built to remember</p>
+          </div>
         </div>
 
         <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
@@ -65,7 +68,10 @@ export default function Sidebar() {
             <Heart className="text-rose fill-rose" size={18} />
             <span className="font-handwriting text-xl text-brown">Jozzemiene</span>
           </div>
-          <p className="text-brown-light text-[10px] font-body ml-6 leading-tight">gemaakt met liefde, voor de liefde</p>
+          <div className="flex items-center gap-1 ml-6">
+            <BookMarked size={9} className="text-brown-light" />
+            <p className="text-brown-light text-[10px] font-body leading-tight">built to remember</p>
+          </div>
         </div>
         <button
           onClick={() => setPanelOpen(true)}
