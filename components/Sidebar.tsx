@@ -29,7 +29,7 @@ export default function Sidebar() {
               <Paintbrush size={15} />
             </button>
           </div>
-          <p className="text-brown-light text-xs font-body ml-7">want iemand moet dit bijhouden</p>
+          <p className="text-brown-light text-xs font-body ml-7">gemaakt met liefde, voor de liefde</p>
         </div>
 
         <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
@@ -60,9 +60,12 @@ export default function Sidebar() {
 
       {/* Mobiele top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-warm border-b border-warm px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Heart className="text-rose fill-rose" size={18} />
-          <span className="font-handwriting text-xl text-brown">Jozzemiene</span>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <Heart className="text-rose fill-rose" size={18} />
+            <span className="font-handwriting text-xl text-brown">Jozzemiene</span>
+          </div>
+          <p className="text-brown-light text-[10px] font-body ml-6 leading-tight">gemaakt met liefde, voor de liefde</p>
         </div>
         <button
           onClick={() => setPanelOpen(true)}

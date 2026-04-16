@@ -36,30 +36,32 @@ export default function HomePage() {
   const [newColor, setNewColor] = useState("geel");
   const [adding, setAdding] = useState(false);
 
-  // Laad notities uit localStorage
+  // Laad notities van de server
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("jozzemiene-notes");
-      if (saved) setNotes(JSON.parse(saved));
-    } catch {}
+    fetch("/api/notes")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setNotes(data); })
+      .catch(() => {});
   }, []);
 
-  // Sla op bij elke wijziging
-  function saveNotes(updated: Note[]) {
-    setNotes(updated);
-    try { localStorage.setItem("jozzemiene-notes", JSON.stringify(updated)); } catch {}
-  }
-
-  function addNote() {
+  async function addNote() {
     if (!newText.trim()) return;
-    const note: Note = { id: Date.now().toString(), text: newText.trim(), color: newColor };
-    saveNotes([note, ...notes]);
+    const res = await fetch("/api/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: newText.trim(), color: newColor }),
+    });
+    if (res.ok) {
+      const note = await res.json();
+      setNotes((prev) => [note, ...prev]);
+    }
     setNewText("");
     setAdding(false);
   }
 
-  function deleteNote(id: string) {
-    saveNotes(notes.filter((n) => n.id !== id));
+  async function deleteNote(id: string) {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    await fetch(`/api/notes/${id}`, { method: "DELETE" });
   }
 
   const colorStyle = NOTE_COLORS.find((c) => c.value === newColor) ?? NOTE_COLORS[0];

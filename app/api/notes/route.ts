@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { readDB, writeDB, generateId } from "@/lib/db";
+
+type Note = { id: string; text: string; color: string; created_at: string };
 
 export async function GET() {
-  const { data, error } = await supabase.from("notes").select("*").order("created_at", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const notes = readDB<Note>("notes");
+  return NextResponse.json(notes);
 }
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { data, error } = await supabase.from("notes").insert({
+  const notes = readDB<Note>("notes");
+  const note: Note = {
+    id: generateId(),
     text: body.text,
-    color: body.color ?? "yellow",
-  }).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, { status: 201 });
+    color: body.color ?? "geel",
+    created_at: new Date().toISOString(),
+  };
+  writeDB("notes", [note, ...notes]);
+  return NextResponse.json(note, { status: 201 });
 }
