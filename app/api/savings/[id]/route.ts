@@ -1,37 +1,44 @@
 import { NextResponse } from "next/server";
-import { readDB, writeDB } from "@/lib/db";
-
-type Goal = {
-  id: string;
-  name: string;
-  emoji: string;
-  target: number;
-  saved: number;
-  date_from: string | null;
-  date_to: string | null;
-  created_at: string;
-};
+import { supabase } from "@/lib/supabase";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
-  const goals = readDB<Goal>("savings");
-  const goal = goals.find((g) => g.id === id);
-  if (!goal) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (body.amount !== undefined) {
-    goal.saved = goal.saved + body.amount;
-  }
-  if (body.date_from !== undefined) goal.date_from = body.date_from;
-  if (body.date_to !== undefined) goal.date_to = body.date_to;
+    // Voeg een entry toe en update het totaal
+    const { data: current } = await supabase.from("savings").select("saved").eq("id", id).single();
+    const newSaved = (current?.saved ?? 0) + body.amount;
 
-  writeDB("savings", goals);
-  return NextResponse.json(goal);
+    await supabase.from("savings_entries").insert({ goal_id: id, amount: body.amount });
+    const { data, error } = await supabase
+      .from("savings")
+      .update({ saved: newSaved })
+      .eq("id", id)
+      .select("*, savings_entries(*)")
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (body.date_from !== undefined) updates.date_from = body.date_from;
+  if (body.date_to !== undefined) updates.date_to = body.date_to;
+
+  const { data, error } = await supabase
+    .from("savings")
+    .update(updates)
+    .eq("id", id)
+    .select("*, savings_entries(*)")
+    .single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const goals = readDB<Goal>("savings");
-  writeDB("savings", goals.filter((g) => g.id !== id));
+  await supabase.from("savings_entries").delete().eq("goal_id", id);
+  const { error } = await supabase.from("savings").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
