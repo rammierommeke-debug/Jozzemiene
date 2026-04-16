@@ -1,32 +1,37 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { readDB, writeDB } from "@/lib/db";
+
+type Goal = {
+  id: string;
+  name: string;
+  emoji: string;
+  target: number;
+  saved: number;
+  date_from: string | null;
+  date_to: string | null;
+  created_at: string;
+};
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
+  const goals = readDB<Goal>("savings");
+  const goal = goals.find((g) => g.id === id);
+  if (!goal) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Bedrag toevoegen
   if (body.amount !== undefined) {
-    const { data: current } = await supabase.from("savings").select("saved").eq("id", id).single();
-    const newSaved = (current?.saved ?? 0) + body.amount;
-    const { data, error } = await supabase.from("savings").update({ saved: newSaved }).eq("id", id).select().single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(data);
+    goal.saved = goal.saved + body.amount;
   }
+  if (body.date_from !== undefined) goal.date_from = body.date_from;
+  if (body.date_to !== undefined) goal.date_to = body.date_to;
 
-  // Periode updaten
-  const updates: Record<string, unknown> = {};
-  if (body.date_from !== undefined) updates.date_from = body.date_from;
-  if (body.date_to !== undefined) updates.date_to = body.date_to;
-
-  const { data, error } = await supabase.from("savings").update(updates).eq("id", id).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  writeDB("savings", goals);
+  return NextResponse.json(goal);
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await supabase.from("savings").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const goals = readDB<Goal>("savings");
+  writeDB("savings", goals.filter((g) => g.id !== id));
   return NextResponse.json({ ok: true });
 }

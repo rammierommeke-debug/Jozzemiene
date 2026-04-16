@@ -71,7 +71,7 @@ export default function HomePage() {
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-2">
           <Sun className="text-terracotta" size={28} />
-          <h1 className="font-display text-4xl text-brown">{greeting}, mensen</h1>
+          <h1 className="font-display text-4xl text-brown">{greeting}</h1>
           <Heart className="text-rose fill-rose" size={24} />
         </div>
         <p className="font-handwriting text-xl text-brown-light ml-1 capitalize">{dateStr}</p>
