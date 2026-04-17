@@ -225,11 +225,13 @@ export default function ManillenPage() {
 
   function chooseTrump(suit: Suit) {
     if (!game || !me || game.phase !== "choosing_trump" || game.currentPlayer !== me) return;
+    const other: Player = me === "emma" ? "roel" : "emma";
     saveGame({
       ...game,
       trump: suit,
       phase: "playing",
-      log: [`${PNAME[me]} kiest ${suit} ${SUIT_LABEL[suit]} als troef`, ...game.log].slice(0, 20),
+      currentPlayer: other,
+      log: [`${PNAME[me]} kiest ${suit} ${SUIT_LABEL[suit]} als troef — ${PNAME[other]} legt eerste kaart`, ...game.log].slice(0, 20),
     });
   }
 
