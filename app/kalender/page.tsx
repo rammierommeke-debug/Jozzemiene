@@ -155,19 +155,60 @@ function KalenderInner() {
   };
 
   const modalEvents = modalDay ? eventsOnDay(modalDay) : [];
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [multiSelected, setMultiSelected] = useState<Date[]>([]);
+  const [showMultiForm, setShowMultiForm] = useState(false);
 
-  async function addEventToDay(day: Date) {
-    if (!newTitle.trim()) return;
+  function toggleMultiDay(day: Date) {
+    setMultiSelected(prev =>
+      prev.some(d => isSameDay(d, day)) ? prev.filter(d => !isSameDay(d, day)) : [...prev, day]
+    );
+  }
+
+  async function addEventToDays(dates: Date[]) {
+    if (!newTitle.trim() || dates.length === 0) return;
     const res = await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle, dates: [format(day, "yyyy-MM-dd")], time: newTime || null, category: newCategory, person: newPerson }),
+      body: JSON.stringify({ title: newTitle, dates: dates.map(d => format(d, "yyyy-MM-dd")), time: newTime || null, category: newCategory, person: newPerson }),
     });
     const result = await res.json();
     const created: Event[] = Array.isArray(result) ? result : [result];
-    setEvents((prev) => [...prev, ...created]);
-    setNewTitle("");
-    setNewTime("");
+    setEvents(prev => [...prev, ...created]);
+    setNewTitle(""); setNewTime("");
+  }
+
+  // Category picker with werk sub-options
+  function CategoryPicker() {
+    const isWerk = newCategory === "werk" || newCategory === "werk-vroeg" || newCategory === "werk-laat";
+    return (
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORIES.filter(c => c.key !== "werk-vroeg" && c.key !== "werk-laat").map(cat => (
+            <button key={cat.key} onClick={() => setNewCategory(cat.key === "werk" && !isWerk ? "werk-vroeg" : cat.key)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                (cat.key === "werk" && isWerk) || newCategory === cat.key
+                  ? `${cat.color} border-current` : "bg-warm text-brown-light border-warm hover:bg-cream"
+              }`}>
+              {cat.icon} {cat.label}
+            </button>
+          ))}
+        </div>
+        {isWerk && (
+          <div className="flex gap-1.5 pl-1">
+            <span className="text-xs text-brown-light self-center">↳</span>
+            {WERK_SUBTYPES.map(sub => (
+              <button key={sub.key} onClick={() => setNewCategory(sub.key)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  newCategory === sub.key ? "bg-blue-100 text-blue-600 border-blue-300" : "bg-warm text-brown-light border-warm hover:bg-cream"
+                }`}>
+                {sub.icon} {sub.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   }
 
   if (mode === "bekijken") {
@@ -178,15 +219,9 @@ function KalenderInner() {
             <Calendar className="text-sage" size={28} />
             <h1 className="font-display text-3xl text-brown">Onze Kalender</h1>
           </div>
-          <button
-            onClick={() => router.push("/kalender?mode=bewerken")}
-            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-warm border border-warm hover:bg-cream text-brown-light hover:text-terracotta transition-colors text-sm font-semibold"
-          >
-            <Pencil size={14} /> Bewerken
-          </button>
         </div>
 
-        {/* Maand navigatie */}
+        {/* Maand navigatie + multi-select toggle */}
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-xl hover:bg-warm transition-colors">
             <ChevronLeft size={20} className="text-brown" />
@@ -194,9 +229,16 @@ function KalenderInner() {
           <h2 className="font-display text-2xl text-brown capitalize">
             {format(currentMonth, "MMMM yyyy", { locale: nl })}
           </h2>
-          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-xl hover:bg-warm transition-colors">
-            <ChevronRight size={20} className="text-brown" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setMultiSelectMode(!multiSelectMode); setMultiSelected([]); setShowMultiForm(false); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${multiSelectMode ? "bg-terracotta text-cream border-terracotta" : "bg-cream text-brown-light border-warm hover:border-terracotta"}`}>
+              <CalendarDays size={12} /> {multiSelectMode ? `${multiSelected.length} geselecteerd` : "Meerdere dagen"}
+            </button>
+            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-xl hover:bg-warm transition-colors">
+              <ChevronRight size={20} className="text-brown" />
+            </button>
+          </div>
         </div>
 
         {/* Weekdagen header */}
@@ -215,14 +257,22 @@ function KalenderInner() {
             const dayEvents = eventsOnDay(day);
             const today = isToday(day);
             const inMonth = isSameMonth(day, currentMonth);
+            const isMultiSel = multiSelected.some(d => isSameDay(d, day));
             return (
               <div
                 key={day.toISOString()}
-                onClick={() => inMonth && setModalDay(day)}
-                className={`border-r border-b border-warm min-h-[110px] p-1.5 flex flex-col gap-0.5 transition-colors
-                  ${!inMonth ? "bg-warm/20 opacity-40" : today ? "bg-rose-light/20 cursor-pointer hover:bg-rose-light/40" : "bg-cream cursor-pointer hover:bg-warm/50"}`}
+                onClick={() => {
+                  if (!inMonth) return;
+                  if (multiSelectMode) { toggleMultiDay(day); }
+                  else { setModalDay(day); }
+                }}
+                className={`border-r border-b border-warm min-h-[110px] p-1.5 flex flex-col gap-0.5 transition-colors cursor-pointer
+                  ${!inMonth ? "bg-warm/20 opacity-40 cursor-default" :
+                    isMultiSel ? "bg-terracotta/15 ring-2 ring-inset ring-terracotta/40" :
+                    today ? "bg-rose-light/20 hover:bg-rose-light/40" : "bg-cream hover:bg-warm/50"}`}
               >
-                <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-0.5 ${today ? "bg-terracotta text-cream" : "text-brown"}`}>
+                <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-0.5
+                  ${isMultiSel ? "bg-terracotta text-cream" : today ? "bg-terracotta text-cream" : "text-brown"}`}>
                   {format(day, "d")}
                 </span>
                 {dayEvents.map((ev) => {
@@ -255,20 +305,57 @@ function KalenderInner() {
           ))}
         </div>
 
+        {/* Multi-select bar */}
+        {multiSelectMode && multiSelected.length > 0 && (
+          <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-brown text-cream rounded-2xl shadow-xl px-5 py-3 flex items-center gap-4">
+            <span className="text-sm font-semibold">{multiSelected.length} dag{multiSelected.length > 1 ? "en" : ""} geselecteerd</span>
+            <button onClick={() => setShowMultiForm(true)} className="flex items-center gap-1.5 bg-terracotta text-cream px-4 py-1.5 rounded-xl text-sm font-semibold hover:bg-terracotta/80 transition-colors">
+              <Plus size={14} /> Afspraak toevoegen
+            </button>
+            <button onClick={() => { setMultiSelected([]); }} className="text-cream/60 hover:text-cream transition-colors"><X size={16} /></button>
+          </div>
+        )}
+
+        {/* Multi-day form modal */}
+        {showMultiForm && (
+          <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMultiForm(false)}>
+            <div className="bg-cream rounded-3xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-warm">
+                <p className="font-display text-lg text-brown">Toevoegen aan {multiSelected.length} dagen</p>
+                <button onClick={() => setShowMultiForm(false)} className="text-brown-light hover:text-rose"><X size={18} /></button>
+              </div>
+              <div className="p-5 flex flex-col gap-3">
+                <input value={newTitle} onChange={e => setNewTitle(e.target.value)} autoFocus placeholder="Naam van de afspraak..."
+                  className="bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage" />
+                <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
+                  className="bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage" />
+                <CategoryPicker />
+                <div className="flex gap-2">
+                  {PERSONS.map(p => (
+                    <button key={p.key} onClick={() => setNewPerson(p.key)}
+                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${newPerson === p.key ? p.color : "bg-warm text-brown-light hover:bg-cream"}`}>
+                      {p.key}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={async () => { await addEventToDays(multiSelected); setShowMultiForm(false); setMultiSelected([]); setMultiSelectMode(false); }} disabled={!newTitle.trim()}
+                  className="w-full bg-sage text-cream rounded-xl py-2 text-sm font-semibold hover:bg-sage/80 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
+                  <Plus size={14} /> Toevoegen aan {multiSelected.length} dagen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Dag-modal */}
         {modalDay && (
           <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setModalDay(null)}>
             <div className="bg-cream rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-              {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-warm">
-                <p className="font-display text-xl text-brown capitalize">
-                  {format(modalDay, "EEEE d MMMM", { locale: nl })}
-                </p>
-                <button onClick={() => setModalDay(null)} className="text-brown-light hover:text-rose transition-colors"><X size={18} /></button>
+                <p className="font-display text-xl text-brown capitalize">{format(modalDay, "EEEE d MMMM", { locale: nl })}</p>
+                <button onClick={() => setModalDay(null)} className="text-brown-light hover:text-rose"><X size={18} /></button>
               </div>
-
               <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
-                {/* Events */}
                 {modalEvents.length === 0 ? (
                   <p className="text-sm text-brown-light italic">Nog geen afspraken op deze dag.</p>
                 ) : (
@@ -283,33 +370,21 @@ function KalenderInner() {
                             {ev.time && <p className="text-xs opacity-70 flex items-center gap-1"><Clock size={10} />{ev.time}</p>}
                           </div>
                           <span className="text-xs opacity-70 shrink-0">{ev.person}</span>
-                          <button onClick={() => deleteEvent(ev.id)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
-                            <Trash2 size={13} />
-                          </button>
+                          <button onClick={() => deleteEvent(ev.id)} className="shrink-0 opacity-60 hover:opacity-100"><Trash2 size={13} /></button>
                         </li>
                       );
                     })}
                   </ul>
                 )}
-
-                {/* Toevoegen */}
                 <div className="border-t border-warm pt-4 flex flex-col gap-3">
                   <p className="text-xs font-semibold text-brown-light uppercase tracking-wide">Afspraak toevoegen</p>
                   <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && addEventToDay(modalDay)}
+                    onKeyDown={e => e.key === "Enter" && addEventToDays([modalDay])}
                     placeholder="Naam van de afspraak..."
                     className="bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage" />
-                  <div className="flex gap-2">
-                    <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
-                      className="flex-1 bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage" />
-                    <select value={newCategory} onChange={e => setNewCategory(e.target.value)}
-                      className="flex-1 bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage">
-                      {CATEGORIES.filter(c => c.key !== "werk-vroeg" && c.key !== "werk-laat").map(c => (
-                        <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
-                      ))}
-                      {WERK_SUBTYPES.map(s => <option key={s.key} value={s.key}>{s.icon} {s.label}</option>)}
-                    </select>
-                  </div>
+                  <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
+                    className="bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage" />
+                  <CategoryPicker />
                   <div className="flex gap-2">
                     {PERSONS.map(p => (
                       <button key={p.key} onClick={() => setNewPerson(p.key)}
@@ -318,7 +393,7 @@ function KalenderInner() {
                       </button>
                     ))}
                   </div>
-                  <button onClick={() => addEventToDay(modalDay)} disabled={!newTitle.trim()}
+                  <button onClick={async () => { await addEventToDays([modalDay]); }} disabled={!newTitle.trim()}
                     className="w-full bg-sage text-cream rounded-xl py-2 text-sm font-semibold hover:bg-sage/80 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
                     <Plus size={14} /> Toevoegen
                   </button>
