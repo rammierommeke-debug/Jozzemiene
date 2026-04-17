@@ -76,7 +76,7 @@ export default function HomePage() {
         <p className="font-handwriting text-xl text-brown-light ml-1 capitalize">{dateStr}</p>
         <div className="mt-4 p-4 bg-warm rounded-3xl border border-warm/80">
           <p className="font-handwriting text-lg text-brown text-center">
-            "Samen sterk. Maar ook prima apart. 🤝"
+            "Thuis is niet een plek — het zijn wij. 🏡"
           </p>
         </div>
       </div>

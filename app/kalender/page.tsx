@@ -27,7 +27,7 @@ const CATEGORIES = [
   { key: "dokter",     label: "Dokter",     icon: "🏥", color: "bg-green-100 text-green-600" },
   { key: "sport",      label: "Sport",      icon: "🏃", color: "bg-sage-light text-sage" },
   { key: "verjaardag", label: "Verjaardag", icon: "🎂", color: "bg-yellow-100 text-yellow-600" },
-  { key: "uitje",      label: "Uitje",      icon: "✈️", color: "bg-purple-100 text-purple-500" },
+  { key: "uitje",      label: "Uitstap",    icon: "✈️", color: "bg-purple-100 text-purple-500" },
 ];
 
 const PERSONS: { key: Person; color: string; dot: string }[] = [
@@ -195,21 +195,31 @@ export default function KalenderPage() {
                 <button
                   key={day.toISOString()}
                   onClick={() => handleDayClick(day)}
-                  className={`aspect-square rounded-xl text-sm flex flex-col items-center justify-center transition-all duration-100 relative
-                    ${selected ? "bg-terracotta text-cream shadow-sm font-bold" :
-                      today ? "bg-rose-light text-brown font-bold" :
+                  className={`min-h-[56px] rounded-xl text-sm flex flex-col items-start p-1 transition-all duration-100
+                    ${selected ? "bg-terracotta text-cream shadow-sm" :
+                      today ? "bg-rose-light text-brown" :
                       "hover:bg-cream text-brown"}
                     ${!isSameMonth(day, currentMonth) ? "opacity-30" : ""}
                   `}
                 >
-                  {format(day, "d")}
-                  {dayEvents.length > 0 && (
-                    <div className="absolute bottom-0.5 flex gap-0.5">
-                      {dayEvents.slice(0, 3).map((ev, i) => (
-                        <span key={i} className={`w-1 h-1 rounded-full ${selected ? "bg-cream" : getPersonMeta(ev.person).dot}`} />
-                      ))}
-                    </div>
-                  )}
+                  <span className={`text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full mb-0.5 ${today && !selected ? "bg-rose text-cream" : ""}`}>
+                    {format(day, "d")}
+                  </span>
+                  <div className="flex flex-col gap-px w-full">
+                    {dayEvents.slice(0, 2).map((ev) => {
+                      const person = getPersonMeta(ev.person);
+                      return (
+                        <span key={ev.id} className={`text-[9px] leading-tight rounded px-1 truncate w-full font-medium ${selected ? "bg-white/20 text-cream" : `${person.color} opacity-90`}`}>
+                          {ev.title}
+                        </span>
+                      );
+                    })}
+                    {dayEvents.length > 2 && (
+                      <span className={`text-[9px] leading-tight px-1 ${selected ? "text-cream/70" : "text-brown-light"}`}>
+                        +{dayEvents.length - 2}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
