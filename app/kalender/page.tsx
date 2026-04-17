@@ -20,14 +20,21 @@ type Event = {
 };
 
 const CATEGORIES = [
-  { key: "algemeen",   label: "Algemeen",   icon: "📅", color: "bg-warm text-brown-light" },
-  { key: "werk",       label: "Werk",       icon: "💼", color: "bg-blue-100 text-blue-600" },
-  { key: "thuis",      label: "Thuis",      icon: "🏠", color: "bg-terracotta-light/30 text-terracotta" },
-  { key: "samen",      label: "Samen",      icon: "💕", color: "bg-rose-light/50 text-rose" },
-  { key: "dokter",     label: "Dokter",     icon: "🏥", color: "bg-green-100 text-green-600" },
-  { key: "sport",      label: "Sport",      icon: "🏃", color: "bg-sage-light text-sage" },
-  { key: "verjaardag", label: "Verjaardag", icon: "🎂", color: "bg-yellow-100 text-yellow-600" },
-  { key: "uitje",      label: "Uitstap",    icon: "✈️", color: "bg-purple-100 text-purple-500" },
+  { key: "algemeen",    label: "Algemeen",   icon: "📅", color: "bg-warm text-brown-light" },
+  { key: "werk",        label: "Werk",       icon: "💼", color: "bg-blue-100 text-blue-600" },
+  { key: "werk-vroeg",  label: "Vroeg",      icon: "🌙", color: "bg-blue-100 text-blue-600" },
+  { key: "werk-laat",   label: "Laat",       icon: "☀️", color: "bg-blue-100 text-blue-600" },
+  { key: "thuis",       label: "Thuis",      icon: "🏠", color: "bg-terracotta-light/30 text-terracotta" },
+  { key: "samen",       label: "Samen",      icon: "💕", color: "bg-rose-light/50 text-rose" },
+  { key: "dokter",      label: "Dokter",     icon: "🏥", color: "bg-green-100 text-green-600" },
+  { key: "sport",       label: "Sport",      icon: "🏃", color: "bg-sage-light text-sage" },
+  { key: "verjaardag",  label: "Verjaardag", icon: "🎂", color: "bg-yellow-100 text-yellow-600" },
+  { key: "uitje",       label: "Uitstap",    icon: "✈️", color: "bg-purple-100 text-purple-500" },
+];
+
+const WERK_SUBTYPES = [
+  { key: "werk-vroeg", label: "Vroeg", icon: "🌙" },
+  { key: "werk-laat",  label: "Laat",  icon: "☀️" },
 ];
 
 const PERSONS: { key: Person; color: string; dot: string }[] = [
@@ -139,12 +146,18 @@ export default function KalenderPage() {
           </div>
         ))}
         <div className="w-px bg-warm mx-1" />
-        {CATEGORIES.slice(1).map((c) => (
+        {CATEGORIES.filter(c => c.key !== "werk-vroeg" && c.key !== "werk-laat").slice(1).map((c) => (
           <div key={c.key} className="flex items-center gap-1 bg-cream rounded-full px-3 py-1 border border-warm">
             <span className="text-xs">{c.icon}</span>
             <span className="text-xs text-brown-light">{c.label}</span>
           </div>
         ))}
+        <div className="flex items-center gap-1 bg-cream rounded-full px-3 py-1 border border-warm">
+          <span className="text-xs">🌙</span><span className="text-xs text-brown-light">Vroeg</span>
+        </div>
+        <div className="flex items-center gap-1 bg-cream rounded-full px-3 py-1 border border-warm">
+          <span className="text-xs">☀️</span><span className="text-xs text-brown-light">Laat</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
@@ -307,16 +320,32 @@ export default function KalenderPage() {
                 <div>
                   <p className="text-xs text-brown-light mb-1.5">Categorie</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {CATEGORIES.map((cat) => (
-                      <button
-                        key={cat.key}
-                        onClick={() => setNewCategory(cat.key)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold transition-all border ${
-                          newCategory === cat.key ? `${cat.color} border-current` : "bg-cream text-brown-light border-warm hover:bg-warm"
-                        }`}
-                      >
-                        <span>{cat.icon}</span> {cat.label}
-                      </button>
+                    {CATEGORIES.filter(c => c.key !== "werk-vroeg" && c.key !== "werk-laat").map((cat) => (
+                      <div key={cat.key} className="relative group/werk">
+                        <button
+                          onClick={() => setNewCategory(cat.key)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold transition-all border ${
+                            newCategory === cat.key || (cat.key === "werk" && (newCategory === "werk-vroeg" || newCategory === "werk-laat"))
+                              ? `${cat.color} border-current`
+                              : "bg-cream text-brown-light border-warm hover:bg-warm"
+                          }`}
+                        >
+                          <span>{cat.icon}</span> {cat.label}
+                        </button>
+                        {cat.key === "werk" && (
+                          <div className="absolute left-0 top-full mt-1 hidden group-hover/werk:flex flex-col bg-cream border border-warm rounded-2xl shadow-lg overflow-hidden z-10 min-w-[90px]">
+                            {WERK_SUBTYPES.map(sub => (
+                              <button
+                                key={sub.key}
+                                onClick={() => setNewCategory(sub.key)}
+                                className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold hover:bg-warm transition-colors ${newCategory === sub.key ? "bg-blue-100 text-blue-600" : "text-brown"}`}
+                              >
+                                <span>{sub.icon}</span> {sub.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
