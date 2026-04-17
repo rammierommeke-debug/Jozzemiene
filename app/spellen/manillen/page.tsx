@@ -98,6 +98,21 @@ function newGame(): GameState {
   };
 }
 
+const VALID_VALUES = new Set(["6","7","8","9","Z","D","H","A","M"]);
+function isValidGame(g: unknown): g is GameState {
+  if (!g || typeof g !== "object") return false;
+  const gs = g as GameState;
+  try {
+    const allCards = [
+      ...gs.players.emma.open, ...gs.players.emma.hand,
+      ...gs.players.roel.open, ...gs.players.roel.hand,
+      ...gs.deck,
+      ...gs.trick.map(t => t.card),
+    ];
+    return allCards.every(c => VALID_VALUES.has(c.value));
+  } catch { return false; }
+}
+
 // ── Card components ───────────────────────────────────────────────────────────
 
 const RED_SUITS = new Set(["♥", "♦"]);
@@ -164,7 +179,7 @@ export default function ManillenPage() {
     try {
       const res = await fetch("/api/manillen");
       const data = await res.json();
-      setGame(data);
+      setGame(isValidGame(data) ? data : null);
     } catch {}
     setLoading(false);
   }, []);
