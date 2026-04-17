@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, Trophy, RotateCcw } from "lucide-react";
+import { RefreshCw, Trophy, RotateCcw, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -124,10 +125,11 @@ function totalCards(ps: PlayerState): number {
 function newGame(firstPlayer: Player): GameState {
   const deck = shuffle(SUITS.flatMap(s => VALUES.map(v => makeCard(s, v))));
   function dealPlayer(): PlayerState {
-    const cards = deck.splice(0, 8);
+    const slotCards = deck.splice(0, 8);
+    const handCards = deck.splice(0, 8);
     // 4 stapeltjes: kaarten 0-3 zijn open (bovenop), kaarten 4-7 zijn hidden (eronder)
-    const slots: Slot[] = [0, 1, 2, 3].map(i => ({ open: cards[i], hidden: cards[i + 4] }));
-    return { slots, drawn: [] };
+    const slots: Slot[] = [0, 1, 2, 3].map(i => ({ open: slotCards[i], hidden: slotCards[i + 4] }));
+    return { slots, drawn: handCards };
   }
   const emma = dealPlayer();
   const roel = dealPlayer();
@@ -336,7 +338,8 @@ export default function ManillenPage() {
     }
 
     const winner = resolveTrick(newTrick, game.trump);
-    const pts = newTrick.reduce((s, p) => s + POINTS[p.card.value], 0);
+    const basePts = newTrick.reduce((s, p) => s + POINTS[p.card.value], 0);
+    const pts = game.trump === null ? basePts * 2 : basePts;
     const newScores = { ...game.scores, [winner]: game.scores[winner] + pts };
     const newTricksWon = { ...game.tricksWon, [winner]: game.tricksWon[winner] + 1 };
     const loser: Player = winner === "emma" ? "roel" : "emma";
@@ -369,7 +372,7 @@ export default function ManillenPage() {
       currentPlayer: winner,
       phase: finished ? "finished" : "playing",
       roundWinner,
-      log: [`${PNAME[winner]} wint slag! +${pts}pt`, `${PNAME[me]} speelt ${card.suit}${VLABEL[card.value]}`, ...game.log].slice(0, 20),
+      log: [`${PNAME[me]} speelt ${card.suit}${VLABEL[card.value]}`, ...game.log].slice(0, 20),
     });
   }
 
@@ -381,37 +384,61 @@ export default function ManillenPage() {
     </div>
   );
 
-  if (!me) return (
-    <div className="max-w-sm mx-auto pt-14 md:pt-0 flex flex-col items-center gap-6 px-4">
-      <div className="text-center mt-8">
-        <p className="text-6xl mb-3">🃏</p>
-        <h1 className="font-display text-3xl text-brown mb-1">Manillen</h1>
-        <p className="text-brown-light text-sm">Wie ben jij?</p>
+  const Screen = ({ children }: { children: React.ReactNode }) => (
+    <div className="fixed inset-0 z-50 bg-cream overflow-y-auto">
+      <div className="max-w-lg mx-auto px-3 pb-8">
+        {children}
       </div>
-      <div className="flex gap-4 w-full">
-        {(["emma", "roel"] as Player[]).map(p => (
-          <button key={p} onClick={() => setMe(p)}
-            className={`flex-1 rounded-2xl py-5 font-display text-xl border-2 transition-all ${PBG[p]} ${PCOLOR[p]} hover:scale-105`}>
-            {PNAME[p]}
-          </button>
-        ))}
-      </div>
-      <button onClick={() => startNewGame()}
-        className="w-full bg-terracotta text-cream rounded-2xl py-3 font-semibold hover:bg-terracotta/80 transition-colors">
-        Nieuw spel starten
-      </button>
     </div>
   );
 
+  if (!me) return (
+    <Screen>
+      <div className="flex items-center pt-5 mb-6">
+        <Link href="/spellen" className="flex items-center gap-1.5 text-brown-light hover:text-terracotta transition-colors">
+          <ArrowLeft size={18} />
+          <span className="text-sm font-semibold">Spellen</span>
+        </Link>
+      </div>
+      <div className="flex flex-col items-center gap-6">
+        <div className="text-center">
+          <p className="text-6xl mb-3">🃏</p>
+          <h1 className="font-display text-3xl text-brown mb-1">Manillen</h1>
+          <p className="text-brown-light text-sm">Wie ben jij?</p>
+        </div>
+        <div className="flex gap-4 w-full">
+          {(["emma", "roel"] as Player[]).map(p => (
+            <button key={p} onClick={() => setMe(p)}
+              className={`flex-1 rounded-2xl py-5 font-display text-xl border-2 transition-all ${PBG[p]} ${PCOLOR[p]} hover:scale-105`}>
+              {PNAME[p]}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => startNewGame()}
+          className="w-full bg-terracotta text-cream rounded-2xl py-3 font-semibold hover:bg-terracotta/80 transition-colors">
+          Nieuw spel starten
+        </button>
+      </div>
+    </Screen>
+  );
+
   if (!game) return (
-    <div className="max-w-sm mx-auto pt-14 md:pt-0 flex flex-col items-center gap-4 px-4">
-      <p className="text-5xl mt-8">🃏</p>
-      <p className="font-display text-xl text-brown">Geen actief spel</p>
-      <button onClick={() => startNewGame()}
-        className="bg-terracotta text-cream rounded-2xl px-6 py-3 font-semibold hover:bg-terracotta/80 transition-colors">
-        Nieuw spel starten
-      </button>
-    </div>
+    <Screen>
+      <div className="flex items-center pt-5 mb-6">
+        <Link href="/spellen" className="flex items-center gap-1.5 text-brown-light hover:text-terracotta transition-colors">
+          <ArrowLeft size={18} />
+          <span className="text-sm font-semibold">Spellen</span>
+        </Link>
+      </div>
+      <div className="flex flex-col items-center gap-4 mt-8">
+        <p className="text-5xl">🃏</p>
+        <p className="font-display text-xl text-brown">Geen actief spel</p>
+        <button onClick={() => startNewGame()}
+          className="bg-terracotta text-cream rounded-2xl px-6 py-3 font-semibold hover:bg-terracotta/80 transition-colors">
+          Nieuw spel starten
+        </button>
+      </div>
+    </Screen>
   );
 
   const opp: Player = me === "emma" ? "roel" : "emma";
@@ -477,6 +504,13 @@ export default function ManillenPage() {
                 onPlay={() => {}} showHidden isTrump={false} />
             ))}
           </div>
+          {mine.drawn.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap mt-2">
+              {mine.drawn.map(c => (
+                <CardFace key={c.id} card={c} disabled isTrump={false} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
