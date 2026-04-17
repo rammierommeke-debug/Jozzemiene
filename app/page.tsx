@@ -21,6 +21,34 @@ const NOTE_COLORS = [
 
 type Note = { id: string; text: string; color: string };
 
+type WeatherDay = { date: string; code: number; max: number; min: number };
+
+function weatherIcon(code: number): string {
+  if (code === 0) return "☀️";
+  if (code <= 2) return "🌤️";
+  if (code === 3) return "☁️";
+  if (code <= 48) return "🌫️";
+  if (code <= 55) return "🌦️";
+  if (code <= 67) return "🌧️";
+  if (code <= 77) return "🌨️";
+  if (code <= 82) return "🌦️";
+  if (code <= 99) return "⛈️";
+  return "🌡️";
+}
+
+function weatherLabel(code: number): string {
+  if (code === 0) return "Zonnig";
+  if (code <= 2) return "Licht bewolkt";
+  if (code === 3) return "Bewolkt";
+  if (code <= 48) return "Mist";
+  if (code <= 55) return "Motregen";
+  if (code <= 67) return "Regen";
+  if (code <= 77) return "Sneeuw";
+  if (code <= 82) return "Buien";
+  if (code <= 99) return "Onweer";
+  return "Onbekend";
+}
+
 export default function HomePage() {
   const now = new Date();
   const hour = now.getHours();
@@ -30,6 +58,23 @@ export default function HomePage() {
   const dateStr = now.toLocaleDateString("nl-NL", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
+
+  const [weather, setWeather] = useState<WeatherDay[]>([]);
+
+  useEffect(() => {
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=51.02&longitude=3.38&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe%2FBrussels&forecast_days=7")
+      .then(r => r.json())
+      .then(d => {
+        const days: WeatherDay[] = d.daily.time.map((date: string, i: number) => ({
+          date,
+          code: d.daily.weathercode[i],
+          max: Math.round(d.daily.temperature_2m_max[i]),
+          min: Math.round(d.daily.temperature_2m_min[i]),
+        }));
+        setWeather(days);
+      })
+      .catch(() => {});
+  }, []);
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [newText, setNewText] = useState("");
@@ -74,11 +119,27 @@ export default function HomePage() {
           <Heart className="text-rose fill-rose" size={24} />
         </div>
         <p className="font-handwriting text-xl text-brown-light ml-1 capitalize">{dateStr}</p>
-        <div className="mt-4 p-4 bg-warm rounded-3xl border border-warm/80">
-          <p className="font-handwriting text-lg text-brown text-center">
-            "Thuis is niet een plek — het zijn wij. 🏡"
-          </p>
-        </div>
+        {weather.length > 0 && (
+          <div className="mt-4 bg-warm rounded-3xl border border-warm/80 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+              <span className="text-xs font-semibold text-brown-light uppercase tracking-wide">Ruiselede — deze week</span>
+            </div>
+            <div className="grid grid-cols-7 divide-x divide-warm/60">
+              {weather.map((day, i) => {
+                const d = new Date(day.date);
+                const dayLabel = i === 0 ? "Vand." : i === 1 ? "Morg." : d.toLocaleDateString("nl-NL", { weekday: "short" }).slice(0, 2);
+                return (
+                  <div key={day.date} className={`flex flex-col items-center py-3 gap-1 ${i === 0 ? "bg-terracotta/10" : ""}`}>
+                    <span className="text-[10px] font-semibold text-brown-light capitalize">{dayLabel}</span>
+                    <span className="text-xl">{weatherIcon(day.code)}</span>
+                    <span className="text-xs font-bold text-brown">{day.max}°</span>
+                    <span className="text-[10px] text-brown-light">{day.min}°</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <h2 className="font-display text-2xl text-brown mb-4">Wat wil je doen?</h2>
