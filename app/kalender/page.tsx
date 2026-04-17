@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Pencil } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO,
@@ -50,7 +51,27 @@ function getPersonMeta(key: Person) {
   return PERSONS.find((p) => p.key === key) ?? PERSONS[2];
 }
 
+function getEventChipColor(event: Event): string {
+  const isWerk = event.category === "werk" || event.category === "werk-vroeg" || event.category === "werk-laat";
+  if (isWerk) {
+    if (event.person === "Emma") return "bg-green-200 text-green-800";
+    if (event.person === "Roel") return "bg-purple-200 text-purple-700";
+  }
+  return getPersonMeta(event.person).color;
+}
+
 export default function KalenderPage() {
+  return (
+    <Suspense>
+      <KalenderInner />
+    </Suspense>
+  );
+}
+
+function KalenderInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const mode = searchParams.get("mode") === "bewerken" ? "bewerken" : "bekijken";
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,11 +151,107 @@ export default function KalenderPage() {
     return `${format(selectedDates[0], "d MMM", { locale: nl })} – ${format(selectedDates[selectedDates.length - 1], "d MMM", { locale: nl })} (${selectedDates.length} dagen)`;
   };
 
+  if (mode === "bekijken") {
+    return (
+      <div className="max-w-5xl mx-auto pt-14 md:pt-0">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Calendar className="text-sage" size={28} />
+            <h1 className="font-display text-3xl text-brown">Onze Kalender</h1>
+          </div>
+          <button
+            onClick={() => router.push("/kalender?mode=bewerken")}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-warm border border-warm hover:bg-cream text-brown-light hover:text-terracotta transition-colors text-sm font-semibold"
+          >
+            <Pencil size={14} /> Bewerken
+          </button>
+        </div>
+
+        {/* Maand navigatie */}
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-xl hover:bg-warm transition-colors">
+            <ChevronLeft size={20} className="text-brown" />
+          </button>
+          <h2 className="font-display text-2xl text-brown capitalize">
+            {format(currentMonth, "MMMM yyyy", { locale: nl })}
+          </h2>
+          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-xl hover:bg-warm transition-colors">
+            <ChevronRight size={20} className="text-brown" />
+          </button>
+        </div>
+
+        {/* Weekdagen header */}
+        <div className="grid grid-cols-7 mb-1 border-b border-warm">
+          {["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"].map((d) => (
+            <div key={d} className="text-center text-xs font-bold text-brown-light py-2">{d}</div>
+          ))}
+        </div>
+
+        {/* Grote kalender grid */}
+        <div className="grid grid-cols-7 border-l border-t border-warm">
+          {Array.from({ length: startDay }).map((_, i) => (
+            <div key={`e-${i}`} className="border-r border-b border-warm min-h-[100px] bg-warm/30" />
+          ))}
+          {days.map((day) => {
+            const dayEvents = eventsOnDay(day);
+            const today = isToday(day);
+            const inMonth = isSameMonth(day, currentMonth);
+            return (
+              <div
+                key={day.toISOString()}
+                className={`border-r border-b border-warm min-h-[100px] p-1.5 flex flex-col gap-0.5 ${!inMonth ? "bg-warm/20 opacity-50" : today ? "bg-rose-light/20" : "bg-cream"}`}
+              >
+                <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-0.5 ${today ? "bg-terracotta text-cream" : "text-brown"}`}>
+                  {format(day, "d")}
+                </span>
+                {dayEvents.map((ev) => {
+                  const cat = getCategoryMeta(ev.category);
+                  const chipColor = getEventChipColor(ev);
+                  return (
+                    <div key={ev.id} className={`text-[10px] leading-tight rounded px-1.5 py-0.5 font-medium truncate ${chipColor}`}>
+                      {cat.icon} {ev.title}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legenda */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex items-center gap-1.5 bg-cream rounded-full px-3 py-1 border border-warm">
+            <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
+            <span className="text-xs text-brown-light">Emma werk</span>
+          </div>
+          <div className="flex items-center gap-1.5 bg-cream rounded-full px-3 py-1 border border-warm">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+            <span className="text-xs text-brown-light">Roel werk</span>
+          </div>
+          {PERSONS.map((p) => (
+            <div key={p.key} className="flex items-center gap-1.5 bg-cream rounded-full px-3 py-1 border border-warm">
+              <span className={`w-2.5 h-2.5 rounded-full ${p.dot}`} />
+              <span className="text-xs text-brown-light">{p.key}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto pt-14 md:pt-0">
-      <div className="flex items-center gap-3 mb-6">
-        <Calendar className="text-sage" size={28} />
-        <h1 className="font-display text-3xl text-brown">Onze Kalender</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Calendar className="text-sage" size={28} />
+          <h1 className="font-display text-3xl text-brown">Onze Kalender</h1>
+        </div>
+        <button
+          onClick={() => router.push("/kalender")}
+          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-warm border border-warm hover:bg-cream text-brown-light hover:text-terracotta transition-colors text-sm font-semibold"
+        >
+          <Calendar size={14} /> Bekijken
+        </button>
       </div>
 
       {/* Legenda */}
@@ -220,9 +337,8 @@ export default function KalenderPage() {
                   </span>
                   <div className="flex flex-col gap-px w-full">
                     {dayEvents.slice(0, 2).map((ev) => {
-                      const person = getPersonMeta(ev.person);
                       return (
-                        <span key={ev.id} className={`text-[9px] leading-tight rounded px-1 truncate w-full font-medium ${selected ? "bg-white/20 text-cream" : `${person.color} opacity-90`}`}>
+                        <span key={ev.id} className={`text-[9px] leading-tight rounded px-1 truncate w-full font-medium ${selected ? "bg-white/20 text-cream" : `${getEventChipColor(ev)} opacity-90`}`}>
                           {ev.title}
                         </span>
                       );
@@ -266,7 +382,6 @@ export default function KalenderPage() {
                     <ul className="flex flex-col gap-2">
                       {eventsOnFocus.map((ev) => {
                         const cat = getCategoryMeta(ev.category);
-                        const person = getPersonMeta(ev.person);
                         return (
                           <li key={ev.id} className="flex items-center gap-2 group bg-warm rounded-2xl px-3 py-2">
                             <span className="text-base shrink-0">{cat.icon}</span>
@@ -278,7 +393,7 @@ export default function KalenderPage() {
                                 </p>
                               )}
                             </div>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${person.color}`}>{ev.person}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${getEventChipColor(ev)}`}>{ev.person}</span>
                             <button onClick={() => deleteEvent(ev.id)} className="text-brown-light hover:text-rose transition-colors shrink-0">
                               <Trash2 size={13} />
                             </button>

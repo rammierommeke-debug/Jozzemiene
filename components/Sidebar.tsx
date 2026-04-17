@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Paintbrush, BookMarked } from "lucide-react";
+import { Heart, Paintbrush, BookMarked, Eye, Pencil } from "lucide-react";
 import { useTheme } from "@/lib/themeContext";
 import { getIcon } from "@/lib/iconMap";
 
@@ -39,6 +39,38 @@ export default function Sidebar() {
           {navItems.map(({ href, iconName, label }) => {
             const Icon = getIcon(iconName);
             const active = pathname === href;
+            const isKalender = href === "/kalender";
+
+            if (isKalender) {
+              return (
+                <div key={href} className="relative group/kal">
+                  <Link
+                    href={href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 w-full ${
+                      active
+                        ? "bg-terracotta text-cream shadow-sm"
+                        : "text-brown hover:bg-rose-light/40 hover:text-terracotta"
+                    }`}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <span className="font-body font-semibold text-sm">{label}</span>
+                  </Link>
+                  {/* Submenu */}
+                  <div className="absolute left-full top-0 ml-2 hidden group-hover/kal:flex flex-col bg-cream border border-warm rounded-2xl shadow-lg overflow-hidden z-50 min-w-[170px]">
+                    <Link href="/kalender" className="flex items-center gap-2.5 px-4 py-3 text-sm font-semibold text-brown hover:bg-warm transition-colors">
+                      <Eye size={15} className="text-sage shrink-0" />
+                      Agenda bekijken
+                    </Link>
+                    <div className="h-px bg-warm" />
+                    <Link href="/kalender?mode=bewerken" className="flex items-center gap-2.5 px-4 py-3 text-sm font-semibold text-brown hover:bg-warm transition-colors">
+                      <Pencil size={15} className="text-terracotta shrink-0" />
+                      Agenda bewerken
+                    </Link>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={href}
