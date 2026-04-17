@@ -570,17 +570,17 @@ export default function ManillenPage() {
       {/* ── Tegenstander ── */}
       <div className={`rounded-3xl p-3 border ${PBG[opp]}`}>
         <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${PCOLOR[opp]}`}>{PNAME[opp]}</p>
-        {/* 4 stapeltjes tegenstander — open zichtbaar, hidden als ruggetje */}
-        <div className="flex gap-3 mb-3">
+        {/* 4 stapeltjes gecentreerd */}
+        <div className="flex justify-center gap-3 mb-4">
           {theirs.slots.map((slot, i) => (
             <SlotStack key={i} slot={slot} canPlay={false} selected={false} illegal={false}
               onPlay={() => {}} showHidden={false}
               isTrump={game.trump ? (slot.open?.suit === game.trump) : false} />
           ))}
         </div>
-        {/* Getrokken kaarten tegenstander — als ruggetjes */}
+        {/* Handkaarten tegenstander als ruggetjes */}
         {theirs.drawn.length > 0 && (
-          <div className="flex gap-1.5 flex-wrap mt-1">
+          <div className="flex gap-1.5 flex-wrap justify-center border-t border-current/10 pt-3">
             {theirs.drawn.map((_, i) => (
               <CardBack key={i} small />
             ))}
@@ -616,14 +616,9 @@ export default function ManillenPage() {
 
       {/* ── Mijn kaarten ── */}
       <div className={`rounded-3xl p-3 border ${PBG[me]}`}>
-        <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${PCOLOR[me]}`}>
-          Jouw kaarten
-          {!isMyTurn && game.phase === "playing" && (
-            <span className="ml-1 normal-case font-normal text-brown-light">— wacht op {PNAME[opp]}</span>
-          )}
-        </p>
-        {/* 4 stapeltjes — hidden zichtbaar voor eigenaar */}
-        <div className="flex gap-3 mb-3 flex-wrap">
+        <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${PCOLOR[me]}`}>Jouw kaarten</p>
+        {/* 4 stapeltjes gecentreerd */}
+        <div className="flex justify-center gap-3 mb-4">
           {mine.slots.map((slot, i) => {
             const topCard = slot.open;
             const isIllegal = topCard ? (!legal.has(topCard.id) && isMyTurn && !myPlayedCard) : false;
@@ -640,9 +635,9 @@ export default function ManillenPage() {
             );
           })}
         </div>
-        {/* Getrokken kaarten */}
+        {/* Handkaarten */}
         {mine.drawn.length > 0 && (
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap justify-center border-t border-current/10 pt-3">
             {mine.drawn.map(c => {
               const isIllegal = !legal.has(c.id) && isMyTurn && !myPlayedCard;
               return (
@@ -657,10 +652,7 @@ export default function ManillenPage() {
           </div>
         )}
         {isMyTurn && selected && !myPlayedCard && (
-          <p className="text-xs text-terracotta mt-2">Tik nog eens om te spelen</p>
-        )}
-        {myPlayedCard && game.trick.length === 1 && (
-          <p className="text-xs text-brown-light mt-2">Wachten op {PNAME[opp]}…</p>
+          <p className="text-xs text-terracotta mt-2 text-center">Tik nog eens om te spelen</p>
         )}
       </div>
 
