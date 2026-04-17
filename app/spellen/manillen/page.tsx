@@ -199,7 +199,7 @@ function CardFace({ card, selected, disabled, illegal, onClick, isTrump }: {
       <span className="text-xs leading-none">{card.suit}</span>
       <span className="absolute inset-0 flex items-center justify-center text-2xl opacity-10 pointer-events-none select-none">{card.suit}</span>
       {POINTS[card.value] > 0 && (
-        <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold text-amber-500 leading-none">{POINTS[card.value]}p</span>
+        <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold text-amber-500 leading-none">{POINTS[card.value]}</span>
       )}
       {isTrump && <span className="absolute top-0.5 right-1 text-[7px] text-amber-500 leading-none">★</span>}
     </button>
@@ -578,11 +578,11 @@ export default function ManillenPage() {
               isTrump={game.trump ? (slot.open?.suit === game.trump) : false} />
           ))}
         </div>
-        {/* Getrokken kaarten tegenstander */}
+        {/* Getrokken kaarten tegenstander — als ruggetjes */}
         {theirs.drawn.length > 0 && (
           <div className="flex gap-1.5 flex-wrap mt-1">
-            {theirs.drawn.map(c => (
-              <CardFace key={c.id} card={c} disabled isTrump={game.trump === c.suit} />
+            {theirs.drawn.map((_, i) => (
+              <CardBack key={i} small />
             ))}
           </div>
         )}
