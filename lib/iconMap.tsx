@@ -5,7 +5,7 @@ import {
   Waves, Mountain, Gift, Trophy, Zap, Flame, Globe, Map, Compass,
   Clock, Bookmark, Tag, Bell, Settings, Users, User, Baby, Dog,
   Car, Bike, Train, Ship, TentTree, Tent, Umbrella, Palette,
-  Pencil, Scissors, Gem, Crown, Diamond,
+  Pencil, Scissors, Gem, Crown, Diamond, Gamepad2,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -16,7 +16,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Waves, Mountain, Gift, Trophy, Zap, Flame, Globe, Map, Compass,
   Clock, Bookmark, Tag, Bell, Settings, Users, User, Baby, Dog,
   Car, Bike, Train, Ship, TentTree, Tent, Umbrella, Palette,
-  Pencil, Scissors, Gem, Crown, Diamond,
+  Pencil, Scissors, Gem, Crown, Diamond, Gamepad2,
 };
 
 export const ICON_NAMES = Object.keys(ICON_MAP);

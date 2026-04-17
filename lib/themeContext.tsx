@@ -52,6 +52,7 @@ export const DEFAULT_NAV: NavItem[] = [
   { href: "/menu", iconName: "UtensilsCrossed", label: "Menu" },
   { href: "/reizen", iconName: "Plane", label: "Reizen" },
   { href: "/berichtjes", iconName: "Mail", label: "Lieve berichtjes" },
+  { href: "/spellen", iconName: "Gamepad2", label: "Spellen" },
 ];
 
 export const PRESET_THEMES: { name: string; emoji: string; colors: ThemeColors }[] = [
