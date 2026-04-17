@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Pencil } from "lucide-react";
+import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Pencil, X } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO,
@@ -39,9 +39,9 @@ const WERK_SUBTYPES = [
 ];
 
 const PERSONS: { key: Person; color: string; dot: string }[] = [
-  { key: "Emma",  color: "bg-rose text-cream",      dot: "bg-rose" },
-  { key: "Roel",  color: "bg-sage text-cream",       dot: "bg-sage" },
-  { key: "Samen", color: "bg-terracotta text-cream", dot: "bg-terracotta" },
+  { key: "Emma",  color: "bg-rose text-cream",       dot: "bg-rose" },
+  { key: "Roel",  color: "bg-sage text-cream",        dot: "bg-sage" },
+  { key: "Samen", color: "bg-orange-400 text-white",  dot: "bg-orange-400" },
 ];
 
 function getCategoryMeta(key: string) {
@@ -85,6 +85,9 @@ function KalenderInner() {
   const [newTime, setNewTime] = useState("");
   const [newCategory, setNewCategory] = useState("algemeen");
   const [newPerson, setNewPerson] = useState<Person>("Samen");
+
+  // Dag-modal (bekijken view)
+  const [modalDay, setModalDay] = useState<Date | null>(null);
 
   useEffect(() => {
     fetch("/api/events").then((r) => r.json()).then(setEvents).finally(() => setLoading(false));
@@ -151,6 +154,22 @@ function KalenderInner() {
     return `${format(selectedDates[0], "d MMM", { locale: nl })} – ${format(selectedDates[selectedDates.length - 1], "d MMM", { locale: nl })} (${selectedDates.length} dagen)`;
   };
 
+  const modalEvents = modalDay ? eventsOnDay(modalDay) : [];
+
+  async function addEventToDay(day: Date) {
+    if (!newTitle.trim()) return;
+    const res = await fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: newTitle, dates: [format(day, "yyyy-MM-dd")], time: newTime || null, category: newCategory, person: newPerson }),
+    });
+    const result = await res.json();
+    const created: Event[] = Array.isArray(result) ? result : [result];
+    setEvents((prev) => [...prev, ...created]);
+    setNewTitle("");
+    setNewTime("");
+  }
+
   if (mode === "bekijken") {
     return (
       <div className="max-w-5xl mx-auto pt-14 md:pt-0">
@@ -190,7 +209,7 @@ function KalenderInner() {
         {/* Grote kalender grid */}
         <div className="grid grid-cols-7 border-l border-t border-warm">
           {Array.from({ length: startDay }).map((_, i) => (
-            <div key={`e-${i}`} className="border-r border-b border-warm min-h-[100px] bg-warm/30" />
+            <div key={`e-${i}`} className="border-r border-b border-warm min-h-[110px] bg-warm/30" />
           ))}
           {days.map((day) => {
             const dayEvents = eventsOnDay(day);
@@ -199,7 +218,9 @@ function KalenderInner() {
             return (
               <div
                 key={day.toISOString()}
-                className={`border-r border-b border-warm min-h-[100px] p-1.5 flex flex-col gap-0.5 ${!inMonth ? "bg-warm/20 opacity-50" : today ? "bg-rose-light/20" : "bg-cream"}`}
+                onClick={() => inMonth && setModalDay(day)}
+                className={`border-r border-b border-warm min-h-[110px] p-1.5 flex flex-col gap-0.5 transition-colors
+                  ${!inMonth ? "bg-warm/20 opacity-40" : today ? "bg-rose-light/20 cursor-pointer hover:bg-rose-light/40" : "bg-cream cursor-pointer hover:bg-warm/50"}`}
               >
                 <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-0.5 ${today ? "bg-terracotta text-cream" : "text-brown"}`}>
                   {format(day, "d")}
@@ -208,7 +229,8 @@ function KalenderInner() {
                   const cat = getCategoryMeta(ev.category);
                   const chipColor = getEventChipColor(ev);
                   return (
-                    <div key={ev.id} className={`text-[10px] leading-tight rounded px-1.5 py-0.5 font-medium truncate ${chipColor}`}>
+                    <div key={ev.id} className={`text-[10px] leading-none rounded px-1.5 py-1 font-medium truncate ${chipColor}`}>
+                      {ev.time && <span className="opacity-70 mr-0.5">{ev.time}</span>}
                       {cat.icon} {ev.title}
                     </div>
                   );
@@ -221,20 +243,90 @@ function KalenderInner() {
         {/* Legenda */}
         <div className="flex flex-wrap gap-2 mt-4">
           <div className="flex items-center gap-1.5 bg-cream rounded-full px-3 py-1 border border-warm">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
-            <span className="text-xs text-brown-light">Emma werk</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-green-400" /><span className="text-xs text-brown-light">Emma werk</span>
           </div>
           <div className="flex items-center gap-1.5 bg-cream rounded-full px-3 py-1 border border-warm">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-            <span className="text-xs text-brown-light">Roel werk</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-400" /><span className="text-xs text-brown-light">Roel werk</span>
           </div>
           {PERSONS.map((p) => (
             <div key={p.key} className="flex items-center gap-1.5 bg-cream rounded-full px-3 py-1 border border-warm">
-              <span className={`w-2.5 h-2.5 rounded-full ${p.dot}`} />
-              <span className="text-xs text-brown-light">{p.key}</span>
+              <span className={`w-2.5 h-2.5 rounded-full ${p.dot}`} /><span className="text-xs text-brown-light">{p.key}</span>
             </div>
           ))}
         </div>
+
+        {/* Dag-modal */}
+        {modalDay && (
+          <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setModalDay(null)}>
+            <div className="bg-cream rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-warm">
+                <p className="font-display text-xl text-brown capitalize">
+                  {format(modalDay, "EEEE d MMMM", { locale: nl })}
+                </p>
+                <button onClick={() => setModalDay(null)} className="text-brown-light hover:text-rose transition-colors"><X size={18} /></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+                {/* Events */}
+                {modalEvents.length === 0 ? (
+                  <p className="text-sm text-brown-light italic">Nog geen afspraken op deze dag.</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {modalEvents.map((ev) => {
+                      const cat = getCategoryMeta(ev.category);
+                      return (
+                        <li key={ev.id} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 ${getEventChipColor(ev)}`}>
+                          <span className="text-base shrink-0">{cat.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold leading-tight">{ev.title}</p>
+                            {ev.time && <p className="text-xs opacity-70 flex items-center gap-1"><Clock size={10} />{ev.time}</p>}
+                          </div>
+                          <span className="text-xs opacity-70 shrink-0">{ev.person}</span>
+                          <button onClick={() => deleteEvent(ev.id)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                            <Trash2 size={13} />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {/* Toevoegen */}
+                <div className="border-t border-warm pt-4 flex flex-col gap-3">
+                  <p className="text-xs font-semibold text-brown-light uppercase tracking-wide">Afspraak toevoegen</p>
+                  <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && addEventToDay(modalDay)}
+                    placeholder="Naam van de afspraak..."
+                    className="bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage" />
+                  <div className="flex gap-2">
+                    <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)}
+                      className="flex-1 bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage" />
+                    <select value={newCategory} onChange={e => setNewCategory(e.target.value)}
+                      className="flex-1 bg-warm rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage">
+                      {CATEGORIES.filter(c => c.key !== "werk-vroeg" && c.key !== "werk-laat").map(c => (
+                        <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
+                      ))}
+                      {WERK_SUBTYPES.map(s => <option key={s.key} value={s.key}>{s.icon} {s.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    {PERSONS.map(p => (
+                      <button key={p.key} onClick={() => setNewPerson(p.key)}
+                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${newPerson === p.key ? p.color + " shadow-sm" : "bg-warm text-brown-light hover:bg-cream"}`}>
+                        {p.key}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => addEventToDay(modalDay)} disabled={!newTitle.trim()}
+                    className="w-full bg-sage text-cream rounded-xl py-2 text-sm font-semibold hover:bg-sage/80 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
+                    <Plus size={14} /> Toevoegen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
