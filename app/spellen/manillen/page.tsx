@@ -6,25 +6,23 @@ import { RefreshCw, Trophy, RotateCcw } from "lucide-react";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Suit = "♠" | "♥" | "♦" | "♣";
-type Value = "6" | "7" | "8" | "9" | "B" | "D" | "H" | "Z" | "M";
+type Value = "6" | "7" | "8" | "9" | "B" | "D" | "H" | "K" | "M";
 
-interface Card {
-  suit: Suit;
-  value: Value;
-  id: string; // suit+value
-}
+interface Card { suit: Suit; value: Value; id: string }
 
 type Player = "emma" | "roel";
 
-interface PlayerHand {
-  open: Card[];    // face-up, visible to all
-  gedekt: Card[];  // face-down, only owner can see
+interface PlayerState {
+  open: Card[];   // 4 tafelkaarten, zichtbaar voor iedereen
+  hand: Card[];   // gedekte kaarten, alleen eigenaar ziet ze
 }
+
+interface TrickPlay { player: Player; card: Card; fromOpen: boolean }
 
 interface GameState {
   deck: Card[];
-  hands: Record<Player, PlayerHand>;
-  trick: { player: Player; card: Card }[];
+  players: Record<Player, PlayerState>;
+  trick: TrickPlay[];
   trickWinner: Player | null;
   scores: Record<Player, number>;
   tricksWon: Record<Player, number>;
@@ -34,29 +32,24 @@ interface GameState {
   log: string[];
 }
 
-// ── Card helpers ─────────────────────────────────────────────────────────────
+// ── Card constants ────────────────────────────────────────────────────────────
 
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
-const VALUES: Value[] = ["6", "7", "8", "9", "B", "D", "H", "Z", "M"];
+const VALUES: Value[] = ["6", "7", "8", "9", "B", "D", "H", "K", "M"];
 
 const RANK: Record<Value, number> = {
-  "6": 0, "7": 1, "8": 2, "9": 3, "B": 4, "D": 5, "H": 6, "Z": 7, "M": 8,
+  "6": 0, "7": 1, "8": 2, "9": 3, "B": 4, "D": 5, "H": 6, "K": 7, "M": 8,
 };
 const POINTS: Record<Value, number> = {
-  "6": 0, "7": 0, "8": 0, "9": 0, "B": 1, "D": 2, "H": 3, "Z": 4, "M": 5,
+  "6": 0, "7": 0, "8": 0, "9": 0, "B": 1, "D": 2, "H": 3, "K": 4, "M": 5,
 };
-const VALUE_LABEL: Record<Value, string> = {
-  "6": "6", "7": "7", "8": "8", "9": "9", "B": "B", "D": "D", "H": "H", "Z": "Z", "M": "M",
+// Display labels
+const VLABEL: Record<Value, string> = {
+  "6": "6", "7": "7", "8": "8", "9": "9", "B": "B", "D": "D", "H": "H", "K": "K", "M": "A",
 };
 
 function makeCard(suit: Suit, value: Value): Card {
   return { suit, value, id: suit + value };
-}
-
-function makeDeck(): Card[] {
-  const deck: Card[] = [];
-  for (const s of SUITS) for (const v of VALUES) deck.push(makeCard(s, v));
-  return deck;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -68,33 +61,30 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function cardPoints(card: Card): number { return POINTS[card.value]; }
-
-function beats(challenger: Card, defender: Card, leadSuit: Suit): boolean {
-  if (challenger.suit === defender.suit) return RANK[challenger.value] > RANK[defender.value];
-  return false; // different suit never beats
+function beats(challenger: Card, defender: Card): boolean {
+  if (challenger.suit !== defender.suit) return false;
+  return RANK[challenger.value] > RANK[defender.value];
 }
 
-function trickWinner(trick: { player: Player; card: Card }[]): Player {
-  const lead = trick[0];
-  let winner = lead;
+function resolveTrick(trick: TrickPlay[]): Player {
+  let winner = trick[0];
   for (const play of trick.slice(1)) {
-    if (beats(play.card, winner.card, lead.card.suit)) winner = play;
+    if (beats(play.card, winner.card)) winner = play;
   }
   return winner.player;
 }
 
-// ── New game factory ──────────────────────────────────────────────────────────
+// ── New game ──────────────────────────────────────────────────────────────────
 
 function newGame(): GameState {
-  const deck = shuffle(makeDeck());
-  const eDeck = deck.splice(0, 8);
-  const rDeck = deck.splice(0, 8);
+  const deck = shuffle([...SUITS].flatMap(s => VALUES.map(v => makeCard(s, v))));
+  const e = deck.splice(0, 8);
+  const r = deck.splice(0, 8);
   return {
     deck,
-    hands: {
-      emma: { open: eDeck.slice(0, 4), gedekt: eDeck.slice(4) },
-      roel: { open: rDeck.slice(0, 4), gedekt: rDeck.slice(4) },
+    players: {
+      emma: { open: e.slice(0, 4), hand: e.slice(4) },
+      roel: { open: r.slice(0, 4), hand: r.slice(4) },
     },
     trick: [],
     trickWinner: null,
@@ -103,73 +93,82 @@ function newGame(): GameState {
     currentPlayer: "emma",
     phase: "playing",
     roundWinner: null,
-    log: ["Nieuw spel gestart — Emma begint!"],
+    log: ["Nieuw spel — Emma begint!"],
   };
 }
 
-// ── Card visual ───────────────────────────────────────────────────────────────
+// ── Card components ───────────────────────────────────────────────────────────
 
-function CardFace({ card, onClick, selected, disabled }: {
-  card: Card;
-  onClick?: () => void;
-  selected?: boolean;
-  disabled?: boolean;
+const RED_SUITS = new Set(["♥", "♦"]);
+
+function CardFace({
+  card, selected, disabled, onClick, small,
+}: {
+  card: Card; selected?: boolean; disabled?: boolean; onClick?: () => void; small?: boolean;
 }) {
-  const red = card.suit === "♥" || card.suit === "♦";
+  const red = RED_SUITS.has(card.suit);
+  const w = small ? "w-12 h-16" : "w-14 h-20";
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={`
-        relative w-14 h-20 rounded-xl border-2 bg-white flex flex-col items-center justify-center
-        font-bold text-lg select-none transition-all duration-150
+        relative ${w} rounded-xl border-2 bg-white flex flex-col items-start justify-start p-1
+        font-bold select-none transition-all duration-150 shrink-0
         ${red ? "text-red-500" : "text-gray-800"}
-        ${selected ? "border-terracotta -translate-y-3 shadow-lg" : "border-gray-200 shadow-sm"}
-        ${disabled ? "opacity-50 cursor-default" : "cursor-pointer hover:-translate-y-1 hover:shadow-md"}
+        ${selected ? "border-terracotta -translate-y-3 shadow-lg ring-2 ring-terracotta/30" : "border-gray-200 shadow-sm"}
+        ${!disabled ? "cursor-pointer hover:-translate-y-1 hover:shadow-md active:scale-95" : "cursor-default"}
+        ${disabled && !selected ? "opacity-80" : ""}
       `}
     >
-      <span className="text-xl leading-none">{card.suit}</span>
-      <span className="text-sm leading-none mt-0.5">{VALUE_LABEL[card.value]}</span>
+      <span className="text-xs leading-none font-bold">{VLABEL[card.value]}</span>
+      <span className="text-xs leading-none">{card.suit}</span>
+      <span className="absolute inset-0 flex items-center justify-center text-lg opacity-30 pointer-events-none">
+        {card.suit}
+      </span>
       {POINTS[card.value] > 0 && (
-        <span className="absolute bottom-1 right-1.5 text-[9px] font-semibold text-amber-500">{POINTS[card.value]}pt</span>
+        <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold text-amber-500 leading-none">
+          {POINTS[card.value]}p
+        </span>
       )}
     </button>
   );
 }
 
-function CardBack() {
+function CardBack({ small }: { small?: boolean }) {
+  const w = small ? "w-12 h-16" : "w-14 h-20";
   return (
-    <div className="w-14 h-20 rounded-xl border-2 border-gray-200 bg-gradient-to-br from-terracotta to-rose shadow-sm flex items-center justify-center">
-      <span className="text-white text-2xl">🌿</span>
+    <div className={`${w} rounded-xl border-2 border-terracotta/40 bg-gradient-to-br from-terracotta/80 to-rose/60 shadow-sm flex items-center justify-center shrink-0`}>
+      <span className="text-white text-lg">🌿</span>
     </div>
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const PLAYERS: Record<Player, { name: string; color: string }> = {
-  emma: { name: "Emma", color: "text-rose" },
-  roel: { name: "Roel", color: "text-blue-500" },
-};
+const PNAME: Record<Player, string> = { emma: "Emma", roel: "Roel" };
+const PCOLOR: Record<Player, string> = { emma: "text-rose", roel: "text-blue-500" };
+const PBG: Record<Player, string> = { emma: "bg-rose/10 border-rose/30", roel: "bg-blue-50 border-blue-200" };
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function ManillenPage() {
   const [game, setGame] = useState<GameState | null>(null);
   const [me, setMe] = useState<Player | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{ id: string; fromOpen: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Load game state from server
   const loadGame = useCallback(async () => {
-    const res = await fetch("/api/manillen");
-    const data = await res.json();
-    setGame(data);
+    try {
+      const res = await fetch("/api/manillen");
+      const data = await res.json();
+      setGame(data);
+    } catch {}
     setLoading(false);
   }, []);
 
   useEffect(() => { loadGame(); }, [loadGame]);
-
-  // Poll every 3 seconds
   useEffect(() => {
     const id = setInterval(loadGame, 3000);
     return () => clearInterval(id);
@@ -177,314 +176,293 @@ export default function ManillenPage() {
 
   async function saveGame(state: GameState) {
     setSaving(true);
+    setGame(state);
     await fetch("/api/manillen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(state),
     });
-    setGame(state);
     setSaving(false);
   }
 
   async function startNewGame() {
-    await saveGame(newGame());
     setSelected(null);
+    await saveGame(newGame());
   }
 
-  function playCard(card: Card) {
+  function handleCardClick(card: Card, fromOpen: boolean) {
     if (!game || !me || game.currentPlayer !== me || game.phase !== "playing") return;
+    if (selected?.id === card.id) {
+      // Second tap → play the card
+      playCard(card, fromOpen);
+    } else {
+      setSelected({ id: card.id, fromOpen });
+    }
+  }
 
-    const newTrick = [...game.trick, { player: me, card }];
-    const newHands = {
-      ...game.hands,
-      [me]: {
-        open: game.hands[me].open.filter((c) => c.id !== card.id),
-        gedekt: game.hands[me].gedekt.filter((c) => c.id !== card.id),
-      },
+  function playCard(card: Card, fromOpen: boolean) {
+    if (!game || !me) return;
+
+    const newTrick: TrickPlay[] = [...game.trick, { player: me, card, fromOpen }];
+
+    // Remove card from player's hand
+    const updatedMe: PlayerState = {
+      open: fromOpen ? game.players[me].open.filter(c => c.id !== card.id) : game.players[me].open,
+      hand: !fromOpen ? game.players[me].hand.filter(c => c.id !== card.id) : game.players[me].hand,
     };
 
-    let newState: GameState;
+    const newPlayers = { ...game.players, [me]: updatedMe };
+    const other: Player = me === "emma" ? "roel" : "emma";
 
-    if (newTrick.length === 2) {
-      // Trick complete
-      const winner = trickWinner(newTrick);
-      const pts = newTrick.reduce((sum, p) => sum + cardPoints(p.card), 0);
-      const newScores = { ...game.scores, [winner]: game.scores[winner] + pts };
-      const newTricksWon = { ...game.tricksWon, [winner]: game.tricksWon[winner] + 1 };
+    setSelected(null);
 
-      // Draw from deck
-      let newDeck = [...game.deck];
-      const drawFor = (h: PlayerHand, player: Player): PlayerHand => {
-        if (newDeck.length === 0) return h;
-        const drawn = newDeck.shift()!;
-        // drawn card goes open
-        return { ...h, open: [...h.open, drawn] };
-      };
-      // winner draws first, then loser
-      const loser: Player = winner === "emma" ? "roel" : "emma";
-      const updatedHands = { ...newHands };
-      updatedHands[winner] = drawFor(updatedHands[winner], winner);
-      updatedHands[loser] = drawFor(updatedHands[loser], loser);
-
-      const totalCards = updatedHands.emma.open.length + updatedHands.emma.gedekt.length +
-        updatedHands.roel.open.length + updatedHands.roel.gedekt.length + newDeck.length;
-
-      const finished = totalCards === 0 && newTrick.length === 2;
-      const roundWinner = finished
-        ? (newScores.emma > newScores.roel ? "emma" : newScores.roel > newScores.emma ? "roel" : null)
-        : null;
-
-      const logEntry = `${PLAYERS[winner].name} wint slag (+${pts}pt)`;
-
-      newState = {
+    if (newTrick.length < 2) {
+      // First card — wait for opponent
+      saveGame({
         ...game,
-        deck: newDeck,
-        hands: updatedHands,
-        trick: [],
-        trickWinner: winner,
-        scores: newScores,
-        tricksWon: newTricksWon,
-        currentPlayer: winner,
-        phase: finished ? "finished" : "playing",
-        roundWinner,
-        log: [logEntry, ...game.log].slice(0, 20),
-      };
-    } else {
-      // First card played
-      const other: Player = me === "emma" ? "roel" : "emma";
-      const logEntry = `${PLAYERS[me].name} speelt ${card.suit}${VALUE_LABEL[card.value]}`;
-      newState = {
-        ...game,
-        hands: newHands,
+        players: newPlayers,
         trick: newTrick,
         trickWinner: null,
         currentPlayer: other,
-        log: [logEntry, ...game.log].slice(0, 20),
-      };
+        log: [`${PNAME[me]} speelt ${card.suit}${VLABEL[card.value]}`, ...game.log].slice(0, 20),
+      });
+      return;
     }
 
-    setSelected(null);
-    saveGame(newState);
+    // Both played — resolve trick
+    const winner = resolveTrick(newTrick);
+    const pts = newTrick.reduce((s, p) => s + POINTS[p.card.value], 0);
+    const newScores = { ...game.scores, [winner]: game.scores[winner] + pts };
+    const newTricksWon = { ...game.tricksWon, [winner]: game.tricksWon[winner] + 1 };
+    const loser: Player = winner === "emma" ? "roel" : "emma";
+
+    // Draw from deck: winner first, then loser
+    const newDeck = [...game.deck];
+    function drawInto(ps: PlayerState): PlayerState {
+      if (newDeck.length === 0) return ps;
+      const drawn = newDeck.shift()!;
+      return { ...ps, open: [...ps.open, drawn] };
+    }
+    const afterDraw: Record<Player, PlayerState> = { ...newPlayers };
+    afterDraw[winner] = drawInto(afterDraw[winner]);
+    afterDraw[loser] = drawInto(afterDraw[loser]);
+
+    const totalCards = afterDraw.emma.open.length + afterDraw.emma.hand.length +
+      afterDraw.roel.open.length + afterDraw.roel.hand.length + newDeck.length;
+    const finished = totalCards === 0;
+    const roundWinner = finished
+      ? (newScores.emma > newScores.roel ? "emma" : newScores.roel > newScores.emma ? "roel" : null)
+      : null;
+
+    saveGame({
+      ...game,
+      deck: newDeck,
+      players: afterDraw,
+      trick: [],
+      trickWinner: winner,
+      scores: newScores,
+      tricksWon: newTricksWon,
+      currentPlayer: winner,
+      phase: finished ? "finished" : "playing",
+      roundWinner,
+      log: [`${PNAME[winner]} wint slag! +${pts}pt`, `${PNAME[me]} speelt ${card.suit}${VLABEL[card.value]}`, ...game.log].slice(0, 20),
+    });
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Login screen ───────────────────────────────────────────────────────────
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="animate-spin text-terracotta" size={32} />
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <RefreshCw className="animate-spin text-terracotta" size={28} />
+    </div>
+  );
+
+  if (!me) return (
+    <div className="max-w-sm mx-auto pt-14 md:pt-0 flex flex-col items-center gap-6 px-4">
+      <div className="text-center mt-8">
+        <p className="text-6xl mb-3">🃏</p>
+        <h1 className="font-display text-3xl text-brown mb-1">Manillen</h1>
+        <p className="text-brown-light text-sm">Wie ben jij?</p>
       </div>
-    );
-  }
-
-  if (!me) {
-    return (
-      <div className="max-w-sm mx-auto pt-14 md:pt-0 flex flex-col items-center gap-6">
-        <div className="text-center">
-          <p className="text-5xl mb-3">🃏</p>
-          <h1 className="font-display text-3xl text-brown mb-1">Manillen</h1>
-          <p className="text-brown-light text-sm">Wie ben jij?</p>
-        </div>
-        <div className="flex gap-4 w-full">
-          {(["emma", "roel"] as Player[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setMe(p)}
-              className="flex-1 bg-warm border-2 border-warm rounded-2xl py-5 font-display text-xl text-brown hover:border-terracotta hover:text-terracotta transition-colors capitalize"
-            >
-              {PLAYERS[p].name}
-            </button>
-          ))}
-        </div>
-        {!game && (
-          <button
-            onClick={startNewGame}
-            className="w-full bg-terracotta text-cream rounded-2xl py-3 font-semibold hover:bg-terracotta/80 transition-colors"
-          >
-            Nieuw spel starten
+      <div className="flex gap-4 w-full">
+        {(["emma", "roel"] as Player[]).map(p => (
+          <button key={p} onClick={() => setMe(p)}
+            className={`flex-1 rounded-2xl py-5 font-display text-xl border-2 transition-all ${PBG[p]} ${PCOLOR[p]} hover:scale-105`}>
+            {PNAME[p]}
           </button>
-        )}
+        ))}
       </div>
-    );
-  }
+      <button onClick={startNewGame}
+        className="w-full bg-terracotta text-cream rounded-2xl py-3 font-semibold hover:bg-terracotta/80 transition-colors">
+        Nieuw spel starten
+      </button>
+    </div>
+  );
 
-  if (!game) {
-    return (
-      <div className="max-w-sm mx-auto pt-14 md:pt-0 flex flex-col items-center gap-4">
-        <p className="text-5xl">🃏</p>
-        <p className="text-brown font-display text-xl">Geen actief spel</p>
-        <button
-          onClick={startNewGame}
-          className="bg-terracotta text-cream rounded-2xl px-6 py-3 font-semibold hover:bg-terracotta/80 transition-colors"
-        >
-          Nieuw spel starten
-        </button>
-      </div>
-    );
-  }
+  if (!game) return (
+    <div className="max-w-sm mx-auto pt-14 md:pt-0 flex flex-col items-center gap-4 px-4">
+      <p className="text-5xl mt-8">🃏</p>
+      <p className="font-display text-xl text-brown">Geen actief spel</p>
+      <button onClick={startNewGame}
+        className="bg-terracotta text-cream rounded-2xl px-6 py-3 font-semibold hover:bg-terracotta/80 transition-colors">
+        Nieuw spel starten
+      </button>
+    </div>
+  );
 
-  const opponent: Player = me === "emma" ? "roel" : "emma";
-  const myHand = game.hands[me];
-  const oppHand = game.hands[opponent];
+  const opp: Player = me === "emma" ? "roel" : "emma";
+  const mine = game.players[me];
+  const theirs = game.players[opp];
   const isMyTurn = game.currentPlayer === me && game.phase === "playing";
+  const myPlayedCard = game.trick.find(t => t.player === me);
+  const oppPlayedCard = game.trick.find(t => t.player === opp);
 
-  const allMyCards = [...myHand.open, ...myHand.gedekt];
+  // ── Game board ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-lg mx-auto pt-14 md:pt-0 pb-8 flex flex-col gap-4">
+    <div className="max-w-lg mx-auto pt-14 md:pt-0 pb-6 px-3 flex flex-col gap-3 min-h-screen">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between py-1">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🃏</span>
-          <h1 className="font-display text-2xl text-brown">Manillen</h1>
-          {saving && <RefreshCw className="animate-spin text-brown-light" size={14} />}
+          <span className="text-xl">🃏</span>
+          <span className="font-display text-xl text-brown">Manillen</span>
+          {saving && <RefreshCw className="animate-spin text-brown-light" size={12} />}
         </div>
-        <button
-          onClick={startNewGame}
-          className="flex items-center gap-1.5 text-sm text-brown-light hover:text-rose transition-colors"
-        >
-          <RotateCcw size={14} />
-          Nieuw spel
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta transition-colors underline">
+            Speel als {PNAME[opp]}
+          </button>
+          <button onClick={startNewGame} className="flex items-center gap-1 text-xs text-brown-light hover:text-rose transition-colors">
+            <RotateCcw size={12} /> Nieuw
+          </button>
+        </div>
       </div>
 
       {/* Scores */}
-      <div className="grid grid-cols-2 gap-3">
-        {(["emma", "roel"] as Player[]).map((p) => (
-          <div
-            key={p}
-            className={`rounded-2xl p-3 border-2 transition-colors ${
-              game.currentPlayer === p && game.phase === "playing"
-                ? "border-terracotta bg-terracotta/5"
-                : "border-warm bg-warm"
-            }`}
-          >
-            <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${PLAYERS[p].color}`}>
-              {PLAYERS[p].name} {p === me ? "(jij)" : ""}
-            </p>
-            <p className="font-display text-2xl text-brown">{game.scores[p]} pt</p>
-            <p className="text-xs text-brown-light">{game.tricksWon[p]} slagen</p>
+      <div className="grid grid-cols-2 gap-2">
+        {(["emma", "roel"] as Player[]).map(p => (
+          <div key={p} className={`rounded-2xl p-2.5 border-2 transition-all ${
+            game.currentPlayer === p && game.phase === "playing"
+              ? "border-terracotta bg-terracotta/5"
+              : "border-warm bg-warm"
+          }`}>
+            <p className={`text-xs font-semibold ${PCOLOR[p]}`}>{PNAME[p]} {p === me ? "(jij)" : ""}</p>
+            <p className="font-display text-xl text-brown leading-tight">{game.scores[p]}<span className="text-xs font-normal text-brown-light ml-0.5">pt</span></p>
+            <p className="text-[10px] text-brown-light">{game.tricksWon[p]} slagen · {game.deck.length} in stapel</p>
           </div>
         ))}
       </div>
 
-      {/* Finished state */}
+      {/* Finished */}
       {game.phase === "finished" && (
         <div className="bg-warm rounded-3xl p-5 text-center border-2 border-terracotta">
-          <Trophy className="text-amber-400 mx-auto mb-2" size={32} />
+          <Trophy className="text-amber-400 mx-auto mb-2" size={28} />
           <p className="font-display text-2xl text-brown mb-1">
-            {game.roundWinner
-              ? `${PLAYERS[game.roundWinner].name} wint!`
-              : "Gelijkspel!"}
+            {game.roundWinner ? `${PNAME[game.roundWinner]} wint!` : "Gelijkspel!"}
           </p>
-          <p className="text-brown-light text-sm mb-3">
-            Emma {game.scores.emma}pt — Roel {game.scores.roel}pt
-          </p>
-          <button
-            onClick={startNewGame}
-            className="bg-terracotta text-cream rounded-xl px-5 py-2 text-sm font-semibold hover:bg-terracotta/80 transition-colors"
-          >
+          <p className="text-sm text-brown-light mb-3">Emma {game.scores.emma}pt — Roel {game.scores.roel}pt</p>
+          <button onClick={startNewGame}
+            className="bg-terracotta text-cream rounded-xl px-5 py-2 text-sm font-semibold hover:bg-terracotta/80 transition-colors">
             Nog een ronde
           </button>
         </div>
       )}
 
-      {/* Opponent's hand */}
-      <div>
-        <p className="text-xs font-semibold text-brown-light uppercase tracking-wide mb-2">
-          {PLAYERS[opponent].name} ({oppHand.open.length + oppHand.gedekt.length} kaarten)
+      {/* ── OPPONENT SECTION ── */}
+      <div className={`rounded-3xl p-3 border ${PBG[opp]}`}>
+        <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${PCOLOR[opp]}`}>
+          {PNAME[opp]} — hand ({theirs.hand.length} gedekt)
         </p>
+        {/* Opponent's face-down hand */}
+        <div className="flex gap-1 mb-3">
+          {theirs.hand.map((_, i) => <CardBack key={i} small />)}
+          {theirs.hand.length === 0 && <p className="text-xs text-brown-light italic">Geen kaarten in hand</p>}
+        </div>
+        {/* Opponent's open table cards */}
+        <p className="text-[10px] text-brown-light uppercase tracking-wide mb-1.5">Open tafelkaarten</p>
         <div className="flex gap-1.5 flex-wrap">
-          {oppHand.open.map((c) => (
-            <CardFace key={c.id} card={c} disabled />
-          ))}
-          {oppHand.gedekt.map((c) => (
-            <CardBack key={c.id} />
-          ))}
+          {theirs.open.map(c => <CardFace key={c.id} card={c} disabled small />)}
+          {theirs.open.length === 0 && <p className="text-xs text-brown-light italic">Geen open kaarten</p>}
         </div>
       </div>
 
-      {/* Trick area */}
-      <div className="bg-warm rounded-3xl p-4 min-h-[100px] flex items-center justify-center gap-6 border border-warm">
+      {/* ── TRICK AREA ── */}
+      <div className="bg-warm rounded-3xl p-3 flex items-center justify-center gap-8 min-h-[90px] border border-warm/60">
         {game.trick.length === 0 ? (
-          <p className="text-brown-light text-sm">
+          <p className="text-sm text-brown-light text-center">
             {game.trickWinner
-              ? `${PLAYERS[game.trickWinner].name} won de slag`
-              : isMyTurn
-              ? "Jij begint — speel een kaart"
-              : `Wacht op ${PLAYERS[game.currentPlayer].name}...`}
+              ? `${PNAME[game.trickWinner]} won de slag`
+              : isMyTurn ? "Jouw beurt — kies een kaart" : `Wachten op ${PNAME[game.currentPlayer]}…`}
           </p>
         ) : (
-          game.trick.map(({ player, card }) => (
-            <div key={card.id} className="flex flex-col items-center gap-1">
-              <p className="text-xs font-semibold text-brown-light">{PLAYERS[player].name}</p>
-              <CardFace card={card} disabled />
-            </div>
-          ))
+          <>
+            {([opp, me] as Player[]).map(p => {
+              const played = game.trick.find(t => t.player === p);
+              return (
+                <div key={p} className="flex flex-col items-center gap-1">
+                  <p className={`text-[10px] font-semibold ${PCOLOR[p]}`}>{PNAME[p]}</p>
+                  {played ? <CardFace card={played.card} disabled /> : (
+                    <div className="w-14 h-20 rounded-xl border-2 border-dashed border-warm/80 flex items-center justify-center">
+                      <span className="text-brown-light text-xs">…</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
         )}
       </div>
 
-      {/* My hand */}
-      <div>
-        <p className="text-xs font-semibold text-brown-light uppercase tracking-wide mb-2">
-          Jouw kaarten ({allMyCards.length})
+      {/* ── MY SECTION ── */}
+      <div className={`rounded-3xl p-3 border ${PBG[me]}`}>
+        {/* My open table cards */}
+        <p className="text-[10px] text-brown-light uppercase tracking-wide mb-1.5">Mijn open tafelkaarten</p>
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          {mine.open.map(c => {
+            const sel = selected?.id === c.id && selected.fromOpen;
+            return (
+              <CardFace key={c.id} card={c} selected={sel} disabled={!isMyTurn || !!myPlayedCard}
+                onClick={() => handleCardClick(c, true)} small />
+            );
+          })}
+          {mine.open.length === 0 && <p className="text-xs text-brown-light italic">Geen open kaarten</p>}
+        </div>
+
+        {/* My hand */}
+        <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${PCOLOR[me]}`}>
+          Mijn hand ({mine.hand.length} kaarten)
           {!isMyTurn && game.phase === "playing" && (
-            <span className="ml-2 text-brown-light normal-case font-normal">— wacht op {PLAYERS[opponent].name}</span>
+            <span className="ml-1 normal-case font-normal text-brown-light">— wacht op {PNAME[opp]}</span>
           )}
         </p>
         <div className="flex gap-1.5 flex-wrap">
-          {myHand.open.map((c) => (
-            <CardFace
-              key={c.id}
-              card={c}
-              selected={selected === c.id}
-              disabled={!isMyTurn}
-              onClick={() => {
-                if (!isMyTurn) return;
-                if (selected === c.id) playCard(c);
-                else setSelected(c.id);
-              }}
-            />
-          ))}
-          {myHand.gedekt.map((c) => (
-            <CardFace
-              key={c.id}
-              card={c}
-              selected={selected === c.id}
-              disabled={!isMyTurn}
-              onClick={() => {
-                if (!isMyTurn) return;
-                if (selected === c.id) playCard(c);
-                else setSelected(c.id);
-              }}
-            />
-          ))}
+          {mine.hand.map(c => {
+            const sel = selected?.id === c.id && !selected.fromOpen;
+            return (
+              <CardFace key={c.id} card={c} selected={sel} disabled={!isMyTurn || !!myPlayedCard}
+                onClick={() => handleCardClick(c, false)} />
+            );
+          })}
+          {mine.hand.length === 0 && <p className="text-xs text-brown-light italic">Geen kaarten in hand</p>}
         </div>
-        {isMyTurn && selected && (
-          <p className="text-xs text-terracotta mt-2">Klik nog eens om te spelen, of kies een andere kaart</p>
+
+        {isMyTurn && selected && !myPlayedCard && (
+          <p className="text-xs text-terracotta mt-2">Tik nog eens op de kaart om te spelen</p>
+        )}
+        {myPlayedCard && game.trick.length === 1 && (
+          <p className="text-xs text-brown-light mt-2">Wachten op {PNAME[opp]}…</p>
         )}
       </div>
 
-      {/* Deck remaining */}
-      <div className="flex items-center gap-2">
-        <p className="text-xs text-brown-light">{game.deck.length} kaarten in stapel</p>
-      </div>
-
       {/* Log */}
-      <div className="bg-warm rounded-2xl p-3 max-h-32 overflow-y-auto">
-        <p className="text-xs font-semibold text-brown-light uppercase tracking-wide mb-1">Spelverloop</p>
+      <div className="bg-warm rounded-2xl p-3 max-h-28 overflow-y-auto">
+        <p className="text-[10px] font-semibold text-brown-light uppercase tracking-wide mb-1">Spelverloop</p>
         {game.log.map((entry, i) => (
-          <p key={i} className="text-xs text-brown leading-relaxed">{entry}</p>
+          <p key={i} className={`text-xs leading-relaxed ${i === 0 ? "text-brown font-semibold" : "text-brown-light"}`}>{entry}</p>
         ))}
       </div>
 
-      {/* Switch player */}
-      <button
-        onClick={() => setMe(opponent)}
-        className="text-xs text-brown-light hover:text-terracotta transition-colors underline text-center"
-      >
-        Speel als {PLAYERS[opponent].name}
-      </button>
     </div>
   );
 }
