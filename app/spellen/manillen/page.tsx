@@ -335,7 +335,7 @@ export default function ManillenPage() {
           </button>
         ))}
       </div>
-      <button onClick={startNewGame}
+      <button onClick={() => startNewGame()}
         className="w-full bg-terracotta text-cream rounded-2xl py-3 font-semibold hover:bg-terracotta/80 transition-colors">
         Nieuw spel starten
       </button>
@@ -346,7 +346,7 @@ export default function ManillenPage() {
     <div className="max-w-sm mx-auto pt-14 md:pt-0 flex flex-col items-center gap-4 px-4">
       <p className="text-5xl mt-8">🃏</p>
       <p className="font-display text-xl text-brown">Geen actief spel</p>
-      <button onClick={startNewGame}
+      <button onClick={() => startNewGame()}
         className="bg-terracotta text-cream rounded-2xl px-6 py-3 font-semibold hover:bg-terracotta/80 transition-colors">
         Nieuw spel starten
       </button>
@@ -445,7 +445,7 @@ export default function ManillenPage() {
           <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta underline">
             Speel als {PNAME[opp]}
           </button>
-          <button onClick={startNewGame} className="flex items-center gap-1 text-xs text-brown-light hover:text-rose transition-colors">
+          <button onClick={() => startNewGame()} className="flex items-center gap-1 text-xs text-brown-light hover:text-rose transition-colors">
             <RotateCcw size={12} /> Nieuw
           </button>
         </div>
@@ -462,7 +462,7 @@ export default function ManillenPage() {
           <p className="text-xs text-brown-light mb-4">
             Volgende beurt: {PNAME[game.firstPlayer === "emma" ? "roel" : "emma"]} begint
           </p>
-          <button onClick={startNewGame}
+          <button onClick={() => startNewGame()}
             className="bg-terracotta text-cream rounded-xl px-5 py-2 text-sm font-semibold hover:bg-terracotta/80 transition-colors">
             Volgende ronde
           </button>
