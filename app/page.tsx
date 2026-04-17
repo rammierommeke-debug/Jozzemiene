@@ -36,7 +36,6 @@ export default function HomePage() {
   const [newColor, setNewColor] = useState("geel");
   const [adding, setAdding] = useState(false);
 
-  // Laad notities van de server
   useEffect(() => {
     fetch("/api/notes")
       .then((r) => r.json())

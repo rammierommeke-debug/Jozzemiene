@@ -6,26 +6,26 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { format, parseISO, differenceInDays, differenceInWeeks, differenceInCalendarMonths } from "date-fns";
 import { nl } from "date-fns/locale";
 
-type Entry = { amount: number; date: string };
+type Entry = { id: string; goal_id: string; amount: number; date: string };
 type Goal = {
   id: string;
   name: string;
   emoji: string;
   target: number;
-  dateFrom: string;
-  dateTo: string;
-  entries: Entry[];
+  date_from: string;
+  date_to: string;
+  savings_entries: Entry[];
 };
 type Period = "dag" | "week" | "maand";
 
 function totalSaved(goal: Goal) {
-  return goal.entries.reduce((s, e) => s + e.amount, 0);
+  return goal.savings_entries.reduce((s, e) => s + e.amount, 0);
 }
 
 function calcPeriod(goal: Goal, period: Period) {
-  if (!goal.dateFrom || !goal.dateTo) return null;
-  const from = parseISO(goal.dateFrom);
-  const to = parseISO(goal.dateTo);
+  if (!goal.date_from || !goal.date_to) return null;
+  const from = parseISO(goal.date_from);
+  const to = parseISO(goal.date_to);
   const remaining = Math.max(goal.target - totalSaved(goal), 0);
   const start = new Date() > from ? new Date() : from;
   if (period === "dag") {
@@ -43,7 +43,7 @@ function calcPeriod(goal: Goal, period: Period) {
 function buildMonthlyData(goals: Goal[]) {
   const map: Record<string, number> = {};
   goals.forEach((g) =>
-    g.entries.forEach((e) => {
+    g.savings_entries.forEach((e) => {
       const key = format(parseISO(e.date), "MMM yy", { locale: nl });
       map[key] = (map[key] ?? 0) + e.amount;
     })
@@ -51,19 +51,10 @@ function buildMonthlyData(goals: Goal[]) {
   return Object.entries(map).slice(-6).map(([month, amount]) => ({ month, amount }));
 }
 
-const STORAGE_KEY = "jozzemiene-savings";
-function load(): Goal[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); } catch { return []; }
-}
-function save(goals: Goal[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(goals)); } catch {}
-}
-
 export default function SparenPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [tab, setTab] = useState<"doelen" | "overzicht">("doelen");
 
-  // Formulier
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("🎯");
@@ -71,43 +62,62 @@ export default function SparenPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Per doel
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [addAmount, setAddAmount] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [periods, setPeriods] = useState<Record<string, Period>>({});
 
-  useEffect(() => { setGoals(load()); }, []);
+  useEffect(() => {
+    fetch("/api/savings/goals")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setGoals(data); })
+      .catch(() => {});
+  }, []);
 
-  function update(updated: Goal[]) { setGoals(updated); save(updated); }
-
-  function createGoal() {
+  async function createGoal() {
     if (!name.trim() || !target) return;
-    const goal: Goal = {
-      id: Date.now().toString(),
-      name: name.trim(), emoji,
-      target: parseFloat(target),
-      dateFrom, dateTo,
-      entries: [],
-    };
-    update([goal, ...goals]);
+    const res = await fetch("/api/savings/goals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), emoji, target: parseFloat(target), dateFrom, dateTo }),
+    });
+    if (res.ok) {
+      const goal = await res.json();
+      setGoals((prev) => [goal, ...prev]);
+    }
     setName(""); setEmoji("🎯"); setTarget(""); setDateFrom(""); setDateTo(""); setShowForm(false);
   }
 
-  function addSavings(id: string) {
+  async function addSavings(goalId: string) {
     const amount = parseFloat(addAmount);
     if (!amount || amount <= 0) return;
-    update(goals.map((g) =>
-      g.id === id ? { ...g, entries: [...g.entries, { amount, date: new Date().toISOString() }] } : g
-    ));
+    const res = await fetch("/api/savings/entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goalId, amount }),
+    });
+    if (res.ok) {
+      const entry = await res.json();
+      setGoals((prev) => prev.map((g) =>
+        g.id === goalId ? { ...g, savings_entries: [...g.savings_entries, entry] } : g
+      ));
+    }
     setAddingTo(null); setAddAmount("");
   }
 
-  function updateDates(id: string, dateFrom: string, dateTo: string) {
-    update(goals.map((g) => g.id === id ? { ...g, dateFrom, dateTo } : g));
+  async function updateDates(id: string, dateFrom: string, dateTo: string) {
+    await fetch(`/api/savings/goals/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dateFrom, dateTo }),
+    });
+    setGoals((prev) => prev.map((g) => g.id === id ? { ...g, date_from: dateFrom, date_to: dateTo } : g));
   }
 
-  function deleteGoal(id: string) { update(goals.filter((g) => g.id !== id)); }
+  async function deleteGoal(id: string) {
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+    await fetch(`/api/savings/goals/${id}`, { method: "DELETE" });
+  }
 
   const allSaved = goals.reduce((s, g) => s + totalSaved(g), 0);
   const allTarget = goals.reduce((s, g) => s + g.target, 0);
@@ -115,7 +125,6 @@ export default function SparenPage() {
 
   return (
     <div className="max-w-2xl mx-auto pt-14 md:pt-0">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <PiggyBank className="text-terracotta" size={28} />
@@ -129,7 +138,6 @@ export default function SparenPage() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-6 bg-warm rounded-2xl p-1">
         {(["doelen", "overzicht"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
@@ -139,7 +147,6 @@ export default function SparenPage() {
         ))}
       </div>
 
-      {/* Formulier */}
       {showForm && (
         <div className="bg-sage-light/30 rounded-3xl p-6 border border-warm mb-6">
           <p className="font-semibold text-brown mb-4 text-sm">Nieuw spaardoel</p>
@@ -173,7 +180,6 @@ export default function SparenPage() {
         </div>
       )}
 
-      {/* ── DOELEN TAB ── */}
       {tab === "doelen" && (
         goals.length === 0 && !showForm ? (
           <div className="text-center mt-24">
@@ -206,7 +212,6 @@ export default function SparenPage() {
 
               return (
                 <div key={goal.id} className={`bg-cream rounded-3xl p-5 border group ${done ? "border-sage/40 ring-2 ring-sage/20" : "border-warm"}`}>
-                  {/* Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{goal.emoji}</span>
@@ -220,7 +225,6 @@ export default function SparenPage() {
                     </button>
                   </div>
 
-                  {/* Voortgang */}
                   <div className="flex justify-between text-sm mb-1.5">
                     <span className="text-brown-light">Gespaard</span>
                     <span className="font-semibold text-brown">€{saved.toFixed(2)} / €{goal.target.toFixed(2)}</span>
@@ -230,7 +234,6 @@ export default function SparenPage() {
                   </div>
                   <p className="text-xs text-brown-light mb-4">{pct}% · nog €{Math.max(goal.target - saved, 0).toFixed(2)} te gaan</p>
 
-                  {/* Spaarplan */}
                   {!done && (
                     <div className="bg-warm rounded-2xl mb-4 overflow-hidden">
                       <button
@@ -243,25 +246,23 @@ export default function SparenPage() {
 
                       {expanded && (
                         <div className="px-4 pb-4 flex flex-col gap-3">
-                          {/* Datums */}
                           <div className="flex gap-2">
                             <div className="flex-1">
                               <label className="text-xs text-brown-light mb-1 block">Van</label>
-                              <input type="date" defaultValue={goal.dateFrom}
-                                onBlur={(e) => updateDates(goal.id, e.target.value, goal.dateTo)}
+                              <input type="date" defaultValue={goal.date_from}
+                                onBlur={(e) => updateDates(goal.id, e.target.value, goal.date_to)}
                                 className="w-full bg-cream rounded-xl border border-warm px-2 py-1.5 text-xs text-brown focus:outline-none focus:border-sage" />
                             </div>
                             <div className="flex-1">
                               <label className="text-xs text-brown-light mb-1 block">Tot</label>
-                              <input type="date" defaultValue={goal.dateTo}
-                                onBlur={(e) => updateDates(goal.id, goal.dateFrom, e.target.value)}
+                              <input type="date" defaultValue={goal.date_to}
+                                onBlur={(e) => updateDates(goal.id, goal.date_from, e.target.value)}
                                 className="w-full bg-cream rounded-xl border border-warm px-2 py-1.5 text-xs text-brown focus:outline-none focus:border-sage" />
                             </div>
                           </div>
 
-                          {goal.dateFrom && goal.dateTo ? (
+                          {goal.date_from && goal.date_to ? (
                             <>
-                              {/* Per dag/week/maand */}
                               <div className="flex gap-1.5">
                                 {(["dag", "week", "maand"] as Period[]).map((p) => (
                                   <button key={p}
@@ -271,7 +272,6 @@ export default function SparenPage() {
                                   </button>
                                 ))}
                               </div>
-
                               {calc && (
                                 <div className="bg-sage-light/40 rounded-2xl p-3 text-center">
                                   <p className="text-2xl font-display text-sage font-bold">€{calc.amount.toFixed(2)}</p>
@@ -287,7 +287,6 @@ export default function SparenPage() {
                     </div>
                   )}
 
-                  {/* Bedrag toevoegen */}
                   {!done && (
                     addingTo === goal.id ? (
                       <div className="flex gap-2">
@@ -314,10 +313,8 @@ export default function SparenPage() {
         )
       )}
 
-      {/* ── OVERZICHT TAB ── */}
       {tab === "overzicht" && (
         <div className="flex flex-col gap-5">
-          {/* Kaartjes */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-cream rounded-3xl p-5 border border-warm">
               <p className="text-xs text-brown-light mb-1">Totaal gespaard</p>
@@ -331,7 +328,6 @@ export default function SparenPage() {
             </div>
           </div>
 
-          {/* Grafiek */}
           <div className="bg-cream rounded-3xl p-5 border border-warm">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp size={16} className="text-sage" />
@@ -362,7 +358,6 @@ export default function SparenPage() {
             )}
           </div>
 
-          {/* Per doel */}
           <div className="bg-cream rounded-3xl p-5 border border-warm">
             <p className="font-semibold text-brown text-sm mb-4">Per doel</p>
             {goals.length === 0 ? (
