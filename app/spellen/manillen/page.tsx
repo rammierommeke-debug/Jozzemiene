@@ -6,7 +6,7 @@ import { RefreshCw, Trophy, RotateCcw } from "lucide-react";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Suit = "♠" | "♥" | "♦" | "♣";
-type Value = "6" | "7" | "8" | "9" | "B" | "D" | "H" | "K" | "M";
+type Value = "6" | "7" | "8" | "9" | "Z" | "D" | "H" | "A" | "M";
 
 interface Card { suit: Suit; value: Value; id: string }
 
@@ -35,17 +35,18 @@ interface GameState {
 // ── Card constants ────────────────────────────────────────────────────────────
 
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
-const VALUES: Value[] = ["6", "7", "8", "9", "B", "D", "H", "K", "M"];
+// 6 7 8 9 Zot Dame Heer Aas Manille(10) — rank laag→hoog
+const VALUES: Value[] = ["6", "7", "8", "9", "Z", "D", "H", "A", "M"];
 
 const RANK: Record<Value, number> = {
-  "6": 0, "7": 1, "8": 2, "9": 3, "B": 4, "D": 5, "H": 6, "K": 7, "M": 8,
+  "6": 0, "7": 1, "8": 2, "9": 3, "Z": 4, "D": 5, "H": 6, "A": 7, "M": 8,
 };
+// Manille=5, Aas=4, Heer=3, Dame=2, Zot=1 → 4×15=60pt totaal
 const POINTS: Record<Value, number> = {
-  "6": 0, "7": 0, "8": 0, "9": 0, "B": 1, "D": 2, "H": 3, "K": 4, "M": 5,
+  "6": 0, "7": 0, "8": 0, "9": 0, "Z": 1, "D": 2, "H": 3, "A": 4, "M": 5,
 };
-// Display labels
 const VLABEL: Record<Value, string> = {
-  "6": "6", "7": "7", "8": "8", "9": "9", "B": "B", "D": "D", "H": "H", "K": "K", "M": "A",
+  "6": "6", "7": "7", "8": "8", "9": "9", "Z": "Z", "D": "D", "H": "H", "A": "A", "M": "10",
 };
 
 function makeCard(suit: Suit, value: Value): Card {
@@ -348,7 +349,11 @@ export default function ManillenPage() {
               : "border-warm bg-warm"
           }`}>
             <p className={`text-xs font-semibold ${PCOLOR[p]}`}>{PNAME[p]} {p === me ? "(jij)" : ""}</p>
-            <p className="font-display text-xl text-brown leading-tight">{game.scores[p]}<span className="text-xs font-normal text-brown-light ml-0.5">pt</span></p>
+            {game.phase === "finished" ? (
+              <p className="font-display text-xl text-brown leading-tight">{game.scores[p]}<span className="text-xs font-normal text-brown-light ml-0.5">pt</span></p>
+            ) : (
+              <p className="font-display text-xl text-brown-light leading-tight">—</p>
+            )}
             <p className="text-[10px] text-brown-light">{game.tricksWon[p]} slagen · {game.deck.length} in stapel</p>
           </div>
         ))}
