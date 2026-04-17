@@ -286,8 +286,8 @@ function AgendaPage({ slug, label, iconName }: { slug: string; label: string; ic
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-brown text-sm">{e.data.title as string}</p>
           <div className="flex gap-3 mt-1">
-            {e.data.time && <span className="flex items-center gap-1 text-xs text-brown-light"><Clock size={10} />{e.data.time as string}</span>}
-            {e.data.location && <span className="flex items-center gap-1 text-xs text-brown-light"><MapPin size={10} />{e.data.location as string}</span>}
+            {!!(e.data.time as string) && <span className="flex items-center gap-1 text-xs text-brown-light"><Clock size={10} />{e.data.time as string}</span>}
+            {!!(e.data.location as string) && <span className="flex items-center gap-1 text-xs text-brown-light"><MapPin size={10} />{e.data.location as string}</span>}
           </div>
         </div>
         <button onClick={() => deleteEntry(e.id)} className="opacity-0 group-hover:opacity-100 text-brown-light hover:text-rose transition-all shrink-0">
@@ -457,9 +457,9 @@ function TrainingPage({ slug, label, iconName }: { slug: string; label: string; 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-brown text-sm">{st.label}</p>
                 <div className="flex gap-3 mt-0.5">
-                  {e.data.distance && <span className="text-xs text-brown-light">{e.data.distance as number} km</span>}
-                  {e.data.duration && <span className="text-xs text-brown-light">⏱ {e.data.duration as string}</span>}
-                  {e.data.notes && <span className="text-xs text-brown-light italic truncate">{e.data.notes as string}</span>}
+                  {!!(e.data.distance as number) && <span className="text-xs text-brown-light">{e.data.distance as number} km</span>}
+                  {!!(e.data.duration as string) && <span className="text-xs text-brown-light">⏱ {e.data.duration as string}</span>}
+                  {!!(e.data.notes as string) && <span className="text-xs text-brown-light italic truncate">{e.data.notes as string}</span>}
                 </div>
               </div>
               <p className="text-xs text-brown-light shrink-0">{format(parseISO(e.created_at), "d MMM", { locale: nl })}</p>
@@ -533,7 +533,7 @@ function ChecklistPage({ slug, label, iconName }: { slug: string; label: string;
           <div key={e.id} className="flex items-center gap-3 bg-cream rounded-2xl p-3 border border-warm group">
             <button onClick={() => toggle(e)}
               className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${e.data.checked ? "bg-sage border-sage" : "border-warm hover:border-sage"}`}>
-              {e.data.checked && <Check size={12} className="text-cream" />}
+              {!!(e.data.checked as boolean) && <Check size={12} className="text-cream" />}
             </button>
             <span className={`flex-1 text-sm ${e.data.checked ? "line-through text-brown-light" : "text-brown"}`}>
               {e.data.text as string}
