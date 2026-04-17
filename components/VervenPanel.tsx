@@ -22,6 +22,7 @@ export default function VervenPanel() {
   const [showIconPicker, setShowIconPicker] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [newIcon, setNewIcon] = useState("Star");
+  const [newPageType, setNewPageType] = useState("tekst");
   const [showAddForm, setShowAddForm] = useState(false);
 
   if (!panelOpen) return null;
@@ -40,14 +41,24 @@ export default function VervenPanel() {
     setNavItems(config.navItems.filter(item => item.href !== href));
   }
 
+  const PAGE_TYPES = [
+    { value: "tekst",     emoji: "📝", label: "Tekst",      desc: "Vrije aantekeningen" },
+    { value: "blog",      emoji: "✍️",  label: "Blog",       desc: "Posts met titel & datum" },
+    { value: "dagboek",   emoji: "📖", label: "Dagboek",    desc: "Dagelijkse entries" },
+    { value: "agenda",    emoji: "📅", label: "Agenda",     desc: "Afspraken bijhouden" },
+    { value: "training",  emoji: "🏃", label: "Training",   desc: "Sport & loopschema" },
+    { value: "checklist", emoji: "✅", label: "Checklist",  desc: "Afvinklijstje" },
+  ];
+
   function addCustomSection() {
     if (!newLabel.trim()) return;
     const slug = newLabel.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
     const href = `/custom/${slug}`;
     if (config.navItems.some(i => i.href === href)) return;
-    setNavItems([...config.navItems, { href, iconName: newIcon, label: newLabel.trim(), isCustom: true }]);
+    setNavItems([...config.navItems, { href, iconName: newIcon, label: newLabel.trim(), isCustom: true, pageType: newPageType }]);
     setNewLabel("");
     setNewIcon("Star");
+    setNewPageType("tekst");
     setShowAddForm(false);
   }
 
@@ -254,6 +265,24 @@ export default function VervenPanel() {
                       onKeyDown={e => e.key === "Enter" && addCustomSection()}
                       className="bg-cream rounded-xl px-3 py-2 text-sm text-brown border border-warm focus:outline-none focus:border-terracotta"
                     />
+                    <div>
+                      <p className="text-xs text-brown-light mb-2">Type pagina:</p>
+                      <div className="grid grid-cols-2 gap-1.5 mb-3">
+                        {PAGE_TYPES.map(pt => (
+                          <button
+                            key={pt.value}
+                            onClick={() => setNewPageType(pt.value)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors border ${newPageType === pt.value ? "bg-terracotta text-cream border-terracotta" : "bg-cream text-brown border-warm hover:border-terracotta"}`}
+                          >
+                            <span className="text-base">{pt.emoji}</span>
+                            <div>
+                              <p className="text-xs font-semibold leading-none">{pt.label}</p>
+                              <p className={`text-[10px] leading-none mt-0.5 ${newPageType === pt.value ? "text-cream/70" : "text-brown-light"}`}>{pt.desc}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div>
                       <p className="text-xs text-brown-light mb-2">Icoontje:</p>
                       <div className="grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">

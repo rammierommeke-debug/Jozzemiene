@@ -20,6 +20,7 @@ export type NavItem = {
   iconName: string;
   label: string;
   isCustom?: boolean;
+  pageType?: string;
 };
 
 export type ThemeConfig = {
