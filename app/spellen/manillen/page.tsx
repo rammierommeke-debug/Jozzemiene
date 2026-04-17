@@ -11,7 +11,16 @@ type Phase = "choosing_trump" | "playing" | "finished";
 
 interface Card { suit: Suit; value: Value; id: string }
 type Player = "emma" | "roel";
-interface PlayerState { open: Card[]; hand: Card[] }
+
+// Each slot = 1 stapeltje: open kaart bovenop, hidden eronder
+// hidden is null wanneer de open kaart al gespeeld is (hidden werd onthuld)
+interface Slot { open: Card | null; hidden: Card | null }
+
+interface PlayerState {
+  slots: Slot[];   // 4 stapeltjes
+  drawn: Card[];   // getrokken kaarten (altijd open, geen hidden partner)
+}
+
 interface TrickPlay { player: Player; card: Card }
 
 interface GameState {
@@ -24,7 +33,7 @@ interface GameState {
   currentPlayer: Player;
   phase: Phase;
   trump: Suit | null;
-  firstPlayer: Player; // wisselt elke ronde ("om de buurt")
+  firstPlayer: Player;
   roundWinner: Player | null;
   log: string[];
 }
@@ -38,7 +47,6 @@ const VALUES: Value[] = ["6", "7", "8", "9", "Z", "D", "H", "A", "M"];
 const RANK: Record<Value, number> = {
   "6": 0, "7": 1, "8": 2, "9": 3, "Z": 4, "D": 5, "H": 6, "A": 7, "M": 8,
 };
-// Manille=5, Aas=4, Heer=3, Dame=2, Zot=1 → 4×15=60pt
 const POINTS: Record<Value, number> = {
   "6": 0, "7": 0, "8": 0, "9": 0, "Z": 1, "D": 2, "H": 3, "A": 4, "M": 5,
 };
@@ -46,9 +54,7 @@ const VLABEL: Record<Value, string> = {
   "6": "6", "7": "7", "8": "8", "9": "9", "Z": "Z", "D": "D", "H": "H", "A": "A", "M": "10",
 };
 
-function makeCard(suit: Suit, value: Value): Card {
-  return { suit, value, id: suit + value };
-}
+function makeCard(suit: Suit, value: Value): Card { return { suit, value, id: suit + value }; }
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -59,50 +65,75 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// ── Trick resolution with trump ───────────────────────────────────────────────
+// ── Game logic ────────────────────────────────────────────────────────────────
 
-function resolveTrick(trick: TrickPlay[], trump: Suit): Player {
+function resolveTrick(trick: TrickPlay[], trump: Suit | null): Player {
   const leadSuit = trick[0].card.suit;
   let winner = trick[0];
   for (const play of trick.slice(1)) {
-    const wTrump = winner.card.suit === trump;
-    const cTrump = play.card.suit === trump;
-    if (wTrump && !cTrump) continue; // winner stays
-    if (!wTrump && cTrump) { winner = play; continue; } // troef wint
-    // both same situation: only beats if same suit and higher rank
-    if (play.card.suit === winner.card.suit && RANK[play.card.value] > RANK[winner.card.value]) {
-      winner = play;
-    }
+    const wT = winner.card.suit === trump;
+    const cT = play.card.suit === trump;
+    if (wT && !cT) continue;
+    if (!wT && cT) { winner = play; continue; }
+    if (play.card.suit === winner.card.suit && RANK[play.card.value] > RANK[winner.card.value]) winner = play;
   }
   return winner.player;
 }
 
-// Which cards are legally playable when responding to a lead card
-function legalCards(hand: Card[], open: Card[], leadSuit: Suit, trump: Suit): Set<string> {
-  const all = [...hand, ...open];
+// Alle speelbare kaarten (bovenste open kaarten + getrokken kaarten)
+function playableCards(ps: PlayerState): Card[] {
+  const cards: Card[] = [];
+  for (const slot of ps.slots) if (slot.open) cards.push(slot.open);
+  cards.push(...ps.drawn);
+  return cards;
+}
+
+// Welke kaarten zijn legaal te spelen (volgplicht / troefplicht)
+function legalCards(ps: PlayerState, leadSuit: Suit, trump: Suit | null): Set<string> {
+  const all = playableCards(ps);
   const hasLead = all.some(c => c.suit === leadSuit);
-  if (hasLead) {
-    return new Set(all.filter(c => c.suit === leadSuit).map(c => c.id));
+  if (hasLead) return new Set(all.filter(c => c.suit === leadSuit).map(c => c.id));
+  if (trump) {
+    const hasTrump = all.some(c => c.suit === trump);
+    if (hasTrump) return new Set(all.filter(c => c.suit === trump).map(c => c.id));
   }
-  const hasTrump = all.some(c => c.suit === trump);
-  if (hasTrump) {
-    return new Set(all.filter(c => c.suit === trump).map(c => c.id));
-  }
-  return new Set(all.map(c => c.id)); // vrij spel
+  return new Set(all.map(c => c.id));
+}
+
+// Verwijder een kaart uit de PlayerState; onthul hidden als open gespeeld werd
+function removeCard(ps: PlayerState, cardId: string): PlayerState {
+  // Check slots
+  const newSlots = ps.slots.map(slot => {
+    if (slot.open?.id === cardId) {
+      // Open kaart gespeeld → hidden wordt nieuwe open (onthuld)
+      return { open: slot.hidden, hidden: null };
+    }
+    return slot;
+  });
+  // Check drawn
+  const newDrawn = ps.drawn.filter(c => c.id !== cardId);
+  return { slots: newSlots, drawn: newDrawn };
+}
+
+function totalCards(ps: PlayerState): number {
+  return ps.slots.reduce((s, sl) => s + (sl.open ? 1 : 0) + (sl.hidden ? 1 : 0), 0) + ps.drawn.length;
 }
 
 // ── New game ──────────────────────────────────────────────────────────────────
 
 function newGame(firstPlayer: Player): GameState {
   const deck = shuffle(SUITS.flatMap(s => VALUES.map(v => makeCard(s, v))));
-  const e = deck.splice(0, 8);
-  const r = deck.splice(0, 8);
+  function dealPlayer(): PlayerState {
+    const cards = deck.splice(0, 8);
+    // 4 stapeltjes: kaarten 0-3 zijn open (bovenop), kaarten 4-7 zijn hidden (eronder)
+    const slots: Slot[] = [0, 1, 2, 3].map(i => ({ open: cards[i], hidden: cards[i + 4] }));
+    return { slots, drawn: [] };
+  }
+  const emma = dealPlayer();
+  const roel = dealPlayer();
   return {
     deck,
-    players: {
-      emma: { open: e.slice(0, 4), hand: e.slice(4) },
-      roel: { open: r.slice(0, 4), hand: r.slice(4) },
-    },
+    players: { emma, roel },
     trick: [],
     trickWinner: null,
     scores: { emma: 0, roel: 0 },
@@ -116,23 +147,28 @@ function newGame(firstPlayer: Player): GameState {
   };
 }
 
-// ── Validation (detect stale Supabase state) ──────────────────────────────────
+// ── Validation ────────────────────────────────────────────────────────────────
 
 const VALID_VALUES = new Set(["6","7","8","9","Z","D","H","A","M"]);
 function isValidGame(g: unknown): g is GameState {
   if (!g || typeof g !== "object") return false;
   const gs = g as GameState;
   try {
-    const all = [
-      ...gs.players.emma.open, ...gs.players.emma.hand,
-      ...gs.players.roel.open, ...gs.players.roel.hand,
-      ...gs.deck, ...gs.trick.map(t => t.card),
-    ];
+    if (!gs.players?.emma?.slots || !gs.players?.roel?.slots) return false;
+    const all: Card[] = [];
+    for (const p of ["emma","roel"] as Player[]) {
+      for (const slot of gs.players[p].slots) {
+        if (slot.open) all.push(slot.open);
+        if (slot.hidden) all.push(slot.hidden);
+      }
+      all.push(...gs.players[p].drawn);
+    }
+    all.push(...gs.deck, ...gs.trick.map(t => t.card));
     return all.every(c => VALID_VALUES.has(c.value)) && "trump" in gs && "firstPlayer" in gs;
   } catch { return false; }
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Display helpers ───────────────────────────────────────────────────────────
 
 const PNAME: Record<Player, string> = { emma: "Emma", roel: "Roel" };
 const PCOLOR: Record<Player, string> = { emma: "text-rose", roel: "text-blue-500" };
@@ -141,42 +177,80 @@ const RED_SUITS = new Set<Suit>(["♥", "♦"]);
 
 // ── Card visuals ──────────────────────────────────────────────────────────────
 
-function CardFace({ card, selected, disabled, illegal, onClick, small, isTrump }: {
+function CardFace({ card, selected, disabled, illegal, onClick, isTrump }: {
   card: Card; selected?: boolean; disabled?: boolean; illegal?: boolean;
-  onClick?: () => void; small?: boolean; isTrump?: boolean;
+  onClick?: () => void; isTrump?: boolean;
 }) {
   const red = RED_SUITS.has(card.suit);
-  const w = small ? "w-12 h-16" : "w-14 h-20";
   return (
     <button onClick={onClick} disabled={disabled}
       className={`
-        relative ${w} rounded-xl border-2 bg-white flex flex-col items-start justify-start p-1
+        relative w-14 h-20 rounded-xl border-2 bg-white flex flex-col items-start justify-start p-1.5
         font-bold select-none transition-all duration-150 shrink-0
         ${red ? "text-red-500" : "text-gray-800"}
-        ${selected ? "border-terracotta -translate-y-3 shadow-lg ring-2 ring-terracotta/30" : isTrump ? "border-amber-400" : "border-gray-200 shadow-sm"}
+        ${selected ? "border-terracotta -translate-y-4 shadow-xl ring-2 ring-terracotta/30" : isTrump ? "border-amber-400 shadow-sm" : "border-gray-200 shadow-sm"}
         ${!disabled && !illegal ? "cursor-pointer hover:-translate-y-1 hover:shadow-md active:scale-95" : ""}
         ${illegal ? "opacity-30 cursor-not-allowed" : ""}
-        ${disabled && !selected && !illegal ? "opacity-80" : ""}
       `}
     >
       <span className="text-xs leading-none font-bold">{VLABEL[card.value]}</span>
       <span className="text-xs leading-none">{card.suit}</span>
-      <span className="absolute inset-0 flex items-center justify-center text-lg opacity-20 pointer-events-none">{card.suit}</span>
+      <span className="absolute inset-0 flex items-center justify-center text-2xl opacity-10 pointer-events-none select-none">{card.suit}</span>
       {POINTS[card.value] > 0 && (
-        <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold text-amber-500 leading-none">
-          {POINTS[card.value]}p
-        </span>
+        <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold text-amber-500 leading-none">{POINTS[card.value]}p</span>
       )}
-      {isTrump && <span className="absolute top-0.5 right-1 text-[8px] leading-none">★</span>}
+      {isTrump && <span className="absolute top-0.5 right-1 text-[7px] text-amber-500 leading-none">★</span>}
     </button>
   );
 }
 
 function CardBack({ small }: { small?: boolean }) {
-  const w = small ? "w-12 h-16" : "w-14 h-20";
+  const cls = small ? "w-12 h-16 text-base" : "w-14 h-20 text-lg";
   return (
-    <div className={`${w} rounded-xl border-2 border-terracotta/40 bg-gradient-to-br from-terracotta/80 to-rose/60 shadow-sm flex items-center justify-center shrink-0`}>
-      <span className="text-white text-lg">🌿</span>
+    <div className={`${cls} rounded-xl border-2 border-terracotta/40 bg-gradient-to-br from-terracotta/80 to-rose/60 shadow-sm flex items-center justify-center shrink-0`}>
+      <span className="text-white">🌿</span>
+    </div>
+  );
+}
+
+// Stapeltje: open kaart bovenop, optioneel een ruggetje dat eronder uitsteekt
+function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, isTrump }: {
+  slot: Slot;
+  canPlay: boolean;
+  selected: boolean;
+  illegal: boolean;
+  onPlay: () => void;
+  showHidden: boolean; // true = eigenaar, ziet hidden kaart
+  isTrump?: boolean;
+}) {
+  if (!slot.open && !slot.hidden) {
+    // Leeg stapeltje
+    return <div className="w-14 h-20 rounded-xl border-2 border-dashed border-gray-200 opacity-30 shrink-0" />;
+  }
+  return (
+    <div className="relative shrink-0" style={{ width: 56, height: showHidden && slot.hidden ? 88 : 80 }}>
+      {/* Hidden card peeking underneath */}
+      {slot.hidden && (
+        <div className="absolute bottom-0 left-0">
+          {showHidden
+            ? <CardFace card={slot.hidden} disabled isTrump={isTrump} />
+            : <CardBack />
+          }
+        </div>
+      )}
+      {/* Open card on top */}
+      {slot.open && (
+        <div className="absolute top-0 left-0">
+          <CardFace
+            card={slot.open}
+            selected={selected}
+            disabled={!canPlay}
+            illegal={illegal}
+            onClick={canPlay ? onPlay : undefined}
+            isTrump={isTrump}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -223,39 +297,30 @@ export default function ManillenPage() {
     await saveGame(newGame(nextFirst));
   }
 
-  function chooseTrump(suit: Suit) {
+  function chooseTrump(suit: Suit | null) {
     if (!game || !me || game.phase !== "choosing_trump" || game.currentPlayer !== me) return;
     const other: Player = me === "emma" ? "roel" : "emma";
+    const label = suit ? `${suit} ${SUIT_LABEL[suit]} als troef` : "geen troef";
     saveGame({
       ...game,
       trump: suit,
       phase: "playing",
       currentPlayer: other,
-      log: [`${PNAME[me]} kiest ${suit} ${SUIT_LABEL[suit]} als troef — ${PNAME[other]} legt eerste kaart`, ...game.log].slice(0, 20),
+      log: [`${PNAME[me]} kiest ${label} — ${PNAME[other]} legt eerste kaart`, ...game.log].slice(0, 20),
     });
   }
 
   function handleCardClick(card: Card) {
     if (!game || !me || game.currentPlayer !== me || game.phase !== "playing") return;
-    if (selected === card.id) {
-      playCard(card);
-    } else {
-      setSelected(card.id);
-    }
+    if (selected === card.id) playCard(card);
+    else setSelected(card.id);
   }
 
   function playCard(card: Card) {
-    if (!game || !me || !game.trump) return;
-
-    const fromOpen = game.players[me].open.some(c => c.id === card.id);
+    if (!game || !me || game.phase !== "playing") return;
     const newTrick: TrickPlay[] = [...game.trick, { player: me, card }];
-    const updatedMe: PlayerState = {
-      open: game.players[me].open.filter(c => c.id !== card.id),
-      hand: game.players[me].hand.filter(c => c.id !== card.id),
-    };
-    const newPlayers = { ...game.players, [me]: updatedMe };
+    const newPlayers = { ...game.players, [me]: removeCard(game.players[me], card.id) };
     const other: Player = me === "emma" ? "roel" : "emma";
-
     setSelected(null);
 
     if (newTrick.length < 2) {
@@ -270,27 +335,25 @@ export default function ManillenPage() {
       return;
     }
 
-    // Resolve trick
     const winner = resolveTrick(newTrick, game.trump);
     const pts = newTrick.reduce((s, p) => s + POINTS[p.card.value], 0);
     const newScores = { ...game.scores, [winner]: game.scores[winner] + pts };
     const newTricksWon = { ...game.tricksWon, [winner]: game.tricksWon[winner] + 1 };
     const loser: Player = winner === "emma" ? "roel" : "emma";
 
-    // Draw from deck (winner first)
+    // Trek kaart uit stapel: winner eerst
     const newDeck = [...game.deck];
-    function drawInto(ps: PlayerState): PlayerState {
+    function drawCard(ps: PlayerState): PlayerState {
       if (newDeck.length === 0) return ps;
       const drawn = newDeck.shift()!;
-      return { ...ps, open: [...ps.open, drawn] };
+      return { ...ps, drawn: [...ps.drawn, drawn] };
     }
     const afterDraw = { ...newPlayers };
-    afterDraw[winner] = drawInto(afterDraw[winner]);
-    afterDraw[loser] = drawInto(afterDraw[loser]);
+    afterDraw[winner] = drawCard(afterDraw[winner]);
+    afterDraw[loser] = drawCard(afterDraw[loser]);
 
-    const totalCards = afterDraw.emma.open.length + afterDraw.emma.hand.length +
-      afterDraw.roel.open.length + afterDraw.roel.hand.length + newDeck.length;
-    const finished = totalCards === 0;
+    const remaining = totalCards(afterDraw.emma) + totalCards(afterDraw.roel) + newDeck.length;
+    const finished = remaining === 0;
     const roundWinner = finished
       ? (newScores.emma > newScores.roel ? "emma" : newScores.roel > newScores.emma ? "roel" : null)
       : null;
@@ -306,11 +369,7 @@ export default function ManillenPage() {
       currentPlayer: winner,
       phase: finished ? "finished" : "playing",
       roundWinner,
-      log: [
-        `${PNAME[winner]} wint slag! +${pts}pt`,
-        `${PNAME[me]} speelt ${card.suit}${VLABEL[card.value]}`,
-        ...game.log,
-      ].slice(0, 20),
+      log: [`${PNAME[winner]} wint slag! +${pts}pt`, `${PNAME[me]} speelt ${card.suit}${VLABEL[card.value]}`, ...game.log].slice(0, 20),
     });
   }
 
@@ -362,10 +421,9 @@ export default function ManillenPage() {
   const leadCard = game.trick[0]?.card ?? null;
   const myPlayedCard = game.trick.find(t => t.player === me);
 
-  // Legal cards when responding
-  const legal: Set<string> = (game.phase === "playing" && leadCard && !myPlayedCard && isMyTurn && game.trump)
-    ? legalCards(mine.hand, mine.open, leadCard.suit, game.trump)
-    : new Set([...mine.open, ...mine.hand].map(c => c.id));
+  const legal: Set<string> = (game.phase === "playing" && leadCard && !myPlayedCard && isMyTurn)
+    ? legalCards(mine, leadCard.suit, game.trump)
+    : new Set(playableCards(mine).map(c => c.id));
 
   // ── Trump selection screen ─────────────────────────────────────────────────
 
@@ -378,11 +436,8 @@ export default function ManillenPage() {
             <span className="text-xl">🃏</span>
             <span className="font-display text-xl text-brown">Manillen</span>
           </div>
-          <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta underline">
-            Speel als {PNAME[opp]}
-          </button>
+          <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta underline">Speel als {PNAME[opp]}</button>
         </div>
-
         <div className="bg-warm rounded-3xl p-5 text-center border-2 border-terracotta/40">
           <p className="text-3xl mb-2">🎴</p>
           {iChose ? (
@@ -396,6 +451,10 @@ export default function ManillenPage() {
                     {suit} <span className="text-sm font-normal text-brown-light block">{SUIT_LABEL[suit]}</span>
                   </button>
                 ))}
+                <button onClick={() => chooseTrump(null as unknown as Suit)}
+                  className="col-span-2 rounded-2xl py-3 text-sm font-semibold border-2 border-warm hover:border-brown-light hover:bg-warm/60 transition-all text-brown-light">
+                  Geen troef spelen
+                </button>
               </div>
             </>
           ) : (
@@ -403,23 +462,20 @@ export default function ManillenPage() {
               <p className="font-display text-xl text-brown mb-1">{PNAME[game.currentPlayer]} kiest troef</p>
               <p className="text-sm text-brown-light mb-4">Even wachten…</p>
               <RefreshCw className="animate-spin text-terracotta mx-auto mb-4" size={20} />
-              <button onClick={() => startNewGame(me)}
-                className="text-xs text-brown-light hover:text-rose underline transition-colors">
+              <button onClick={() => startNewGame(me)} className="text-xs text-brown-light hover:text-rose underline transition-colors">
                 Nieuw spel starten (jij begint)
               </button>
             </>
           )}
         </div>
-
-        {/* Show my cards already */}
+        {/* Preview eigen kaarten */}
         <div className={`rounded-3xl p-3 border ${PBG[me]}`}>
-          <p className="text-[10px] text-brown-light uppercase tracking-wide mb-1.5">Jouw open tafelkaarten</p>
-          <div className="flex gap-1.5 flex-wrap mb-3">
-            {mine.open.map(c => <CardFace key={c.id} card={c} disabled small />)}
-          </div>
-          <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${PCOLOR[me]}`}>Jouw hand</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {mine.hand.map(c => <CardFace key={c.id} card={c} disabled />)}
+          <p className="text-[10px] text-brown-light uppercase tracking-wide mb-2">Jouw kaarten</p>
+          <div className="flex gap-3 flex-wrap">
+            {mine.slots.map((slot, i) => (
+              <SlotStack key={i} slot={slot} canPlay={false} selected={false} illegal={false}
+                onPlay={() => {}} showHidden isTrump={false} />
+            ))}
           </div>
         </div>
       </div>
@@ -436,17 +492,15 @@ export default function ManillenPage() {
         <div className="flex items-center gap-2">
           <span className="text-xl">🃏</span>
           <span className="font-display text-xl text-brown">Manillen</span>
-          {game.trump && (
-            <span className={`text-lg font-bold ${RED_SUITS.has(game.trump) ? "text-red-500" : "text-gray-700"}`}>
-              {game.trump} <span className="text-xs text-brown-light font-normal">troef</span>
+          {game.phase === "playing" && (
+            <span className={`font-bold ${game.trump && RED_SUITS.has(game.trump) ? "text-red-500" : "text-gray-700"}`}>
+              {game.trump ? game.trump : "∅"} <span className="text-xs text-brown-light font-normal">{game.trump ? "troef" : "geen troef"}</span>
             </span>
           )}
           {saving && <RefreshCw className="animate-spin text-brown-light" size={12} />}
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta underline">
-            Speel als {PNAME[opp]}
-          </button>
+          <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta underline">Speel als {PNAME[opp]}</button>
           <button onClick={() => startNewGame()} className="flex items-center gap-1 text-xs text-brown-light hover:text-rose transition-colors">
             <RotateCcw size={12} /> Nieuw
           </button>
@@ -461,9 +515,7 @@ export default function ManillenPage() {
             {game.roundWinner ? `${PNAME[game.roundWinner]} wint!` : "Gelijkspel!"}
           </p>
           <p className="text-sm text-brown-light mb-1">Emma {game.scores.emma}pt — Roel {game.scores.roel}pt</p>
-          <p className="text-xs text-brown-light mb-4">
-            Volgende beurt: {PNAME[game.firstPlayer === "emma" ? "roel" : "emma"]} begint
-          </p>
+          <p className="text-xs text-brown-light mb-4">Volgende beurt: {PNAME[game.firstPlayer === "emma" ? "roel" : "emma"]} begint</p>
           <button onClick={() => startNewGame()}
             className="bg-terracotta text-cream rounded-xl px-5 py-2 text-sm font-semibold hover:bg-terracotta/80 transition-colors">
             Volgende ronde
@@ -472,9 +524,7 @@ export default function ManillenPage() {
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {(["emma", "roel"] as Player[]).map(p => (
-            <div key={p} className={`rounded-2xl p-2.5 border-2 transition-all ${
-              game.currentPlayer === p ? "border-terracotta bg-terracotta/5" : "border-warm bg-warm"
-            }`}>
+            <div key={p} className={`rounded-2xl p-2.5 border-2 transition-all ${game.currentPlayer === p ? "border-terracotta bg-terracotta/5" : "border-warm bg-warm"}`}>
               <p className={`text-xs font-semibold ${PCOLOR[p]}`}>{PNAME[p]} {p === me ? "(jij)" : ""}</p>
               <p className="font-display text-xl text-brown-light leading-tight">—</p>
               <p className="text-[10px] text-brown-light">{game.tricksWon[p]} slagen · {game.deck.length} in stapel</p>
@@ -483,24 +533,29 @@ export default function ManillenPage() {
         </div>
       )}
 
-      {/* Opponent */}
+      {/* ── Tegenstander ── */}
       <div className={`rounded-3xl p-3 border ${PBG[opp]}`}>
-        <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${PCOLOR[opp]}`}>
-          {PNAME[opp]} — {theirs.hand.length} gedekt
-        </p>
-        <div className="flex gap-1 mb-3">
-          {theirs.hand.map((_, i) => <CardBack key={i} small />)}
-        </div>
-        <p className="text-[10px] text-brown-light uppercase tracking-wide mb-1.5">Open tafelkaarten</p>
-        <div className="flex gap-1.5 flex-wrap">
-          {theirs.open.map(c => (
-            <CardFace key={c.id} card={c} disabled small isTrump={game.trump === c.suit} />
+        <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${PCOLOR[opp]}`}>{PNAME[opp]}</p>
+        {/* 4 stapeltjes tegenstander — open zichtbaar, hidden als ruggetje */}
+        <div className="flex gap-3 mb-3">
+          {theirs.slots.map((slot, i) => (
+            <SlotStack key={i} slot={slot} canPlay={false} selected={false} illegal={false}
+              onPlay={() => {}} showHidden={false}
+              isTrump={game.trump ? (slot.open?.suit === game.trump) : false} />
           ))}
         </div>
+        {/* Getrokken kaarten tegenstander */}
+        {theirs.drawn.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap mt-1">
+            {theirs.drawn.map(c => (
+              <CardFace key={c.id} card={c} disabled isTrump={game.trump === c.suit} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Trick area */}
-      <div className="bg-warm rounded-3xl p-3 flex items-center justify-center gap-8 min-h-[90px] border border-warm/60">
+      {/* ── Tafel ── */}
+      <div className="bg-warm rounded-3xl p-3 flex items-center justify-center gap-8 min-h-[100px] border border-warm/60">
         {game.trick.length === 0 ? (
           <p className="text-sm text-brown-light text-center">
             {game.trickWinner
@@ -508,62 +563,67 @@ export default function ManillenPage() {
               : isMyTurn ? "Jouw beurt — kies een kaart" : `Wachten op ${PNAME[game.currentPlayer]}…`}
           </p>
         ) : (
-          <>
-            {([opp, me] as Player[]).map(p => {
-              const played = game.trick.find(t => t.player === p);
-              return (
-                <div key={p} className="flex flex-col items-center gap-1">
-                  <p className={`text-[10px] font-semibold ${PCOLOR[p]}`}>{PNAME[p]}</p>
-                  {played
-                    ? <CardFace card={played.card} disabled isTrump={game.trump === played.card.suit} />
-                    : <div className="w-14 h-20 rounded-xl border-2 border-dashed border-warm/80 flex items-center justify-center">
-                        <span className="text-brown-light text-xs">…</span>
-                      </div>
-                  }
-                </div>
-              );
-            })}
-          </>
+          ([opp, me] as Player[]).map(p => {
+            const played = game.trick.find(t => t.player === p);
+            return (
+              <div key={p} className="flex flex-col items-center gap-1">
+                <p className={`text-[10px] font-semibold ${PCOLOR[p]}`}>{PNAME[p]}</p>
+                {played
+                  ? <CardFace card={played.card} disabled isTrump={game.trump === played.card.suit} />
+                  : <div className="w-14 h-20 rounded-xl border-2 border-dashed border-warm/80 flex items-center justify-center">
+                      <span className="text-brown-light text-xs">…</span>
+                    </div>
+                }
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* My section */}
+      {/* ── Mijn kaarten ── */}
       <div className={`rounded-3xl p-3 border ${PBG[me]}`}>
-        <p className="text-[10px] text-brown-light uppercase tracking-wide mb-1.5">Mijn open tafelkaarten</p>
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          {mine.open.map(c => {
-            const isIllegal = !legal.has(c.id) && isMyTurn && !myPlayedCard && game.phase === "playing";
-            return (
-              <CardFace key={c.id} card={c}
-                selected={selected === c.id}
-                disabled={!isMyTurn || !!myPlayedCard}
-                illegal={isIllegal}
-                isTrump={game.trump === c.suit}
-                onClick={() => handleCardClick(c)} small />
-            );
-          })}
-        </div>
-        <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${PCOLOR[me]}`}>
-          Mijn hand
+        <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${PCOLOR[me]}`}>
+          Jouw kaarten
           {!isMyTurn && game.phase === "playing" && (
             <span className="ml-1 normal-case font-normal text-brown-light">— wacht op {PNAME[opp]}</span>
           )}
         </p>
-        <div className="flex gap-1.5 flex-wrap">
-          {mine.hand.map(c => {
-            const isIllegal = !legal.has(c.id) && isMyTurn && !myPlayedCard && game.phase === "playing";
+        {/* 4 stapeltjes — hidden zichtbaar voor eigenaar */}
+        <div className="flex gap-3 mb-3 flex-wrap">
+          {mine.slots.map((slot, i) => {
+            const topCard = slot.open;
+            const isIllegal = topCard ? (!legal.has(topCard.id) && isMyTurn && !myPlayedCard) : false;
+            const isSel = topCard ? selected === topCard.id : false;
             return (
-              <CardFace key={c.id} card={c}
-                selected={selected === c.id}
-                disabled={!isMyTurn || !!myPlayedCard}
+              <SlotStack key={i} slot={slot}
+                canPlay={isMyTurn && !myPlayedCard && !!topCard}
+                selected={isSel}
                 illegal={isIllegal}
-                isTrump={game.trump === c.suit}
-                onClick={() => handleCardClick(c)} />
+                onPlay={() => topCard && handleCardClick(topCard)}
+                showHidden
+                isTrump={game.trump ? (slot.open?.suit === game.trump || slot.hidden?.suit === game.trump) : false}
+              />
             );
           })}
         </div>
+        {/* Getrokken kaarten */}
+        {mine.drawn.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap">
+            {mine.drawn.map(c => {
+              const isIllegal = !legal.has(c.id) && isMyTurn && !myPlayedCard;
+              return (
+                <CardFace key={c.id} card={c}
+                  selected={selected === c.id}
+                  disabled={!isMyTurn || !!myPlayedCard}
+                  illegal={isIllegal}
+                  isTrump={game.trump === c.suit}
+                  onClick={() => handleCardClick(c)} />
+              );
+            })}
+          </div>
+        )}
         {isMyTurn && selected && !myPlayedCard && (
-          <p className="text-xs text-terracotta mt-2">Tik nog eens op de kaart om te spelen</p>
+          <p className="text-xs text-terracotta mt-2">Tik nog eens om te spelen</p>
         )}
         {myPlayedCard && game.trick.length === 1 && (
           <p className="text-xs text-brown-light mt-2">Wachten op {PNAME[opp]}…</p>
