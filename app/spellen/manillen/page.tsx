@@ -216,12 +216,10 @@ export default function ManillenPage() {
     setSaving(false);
   }
 
-  async function startNewGame() {
+  async function startNewGame(forceFirst?: Player) {
     setSelected(null);
-    // "om de buurt": whoever didn't start last time starts now
-    const nextFirst: Player = game
-      ? (game.firstPlayer === "emma" ? "roel" : "emma")
-      : "emma";
+    const nextFirst: Player = forceFirst
+      ?? (game ? (game.firstPlayer === "emma" ? "roel" : "emma") : "emma");
     await saveGame(newGame(nextFirst));
   }
 
@@ -337,7 +335,7 @@ export default function ManillenPage() {
           </button>
         ))}
       </div>
-      <button onClick={() => { setMe("emma"); startNewGame(); }}
+      <button onClick={startNewGame}
         className="w-full bg-terracotta text-cream rounded-2xl py-3 font-semibold hover:bg-terracotta/80 transition-colors">
         Nieuw spel starten
       </button>
@@ -401,8 +399,12 @@ export default function ManillenPage() {
           ) : (
             <>
               <p className="font-display text-xl text-brown mb-1">{PNAME[game.currentPlayer]} kiest troef</p>
-              <p className="text-sm text-brown-light">Even wachten…</p>
-              <RefreshCw className="animate-spin text-terracotta mx-auto mt-4" size={20} />
+              <p className="text-sm text-brown-light mb-4">Even wachten…</p>
+              <RefreshCw className="animate-spin text-terracotta mx-auto mb-4" size={20} />
+              <button onClick={() => startNewGame(me)}
+                className="text-xs text-brown-light hover:text-rose underline transition-colors">
+                Nieuw spel starten (jij begint)
+              </button>
             </>
           )}
         </div>
