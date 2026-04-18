@@ -2,14 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Paintbrush, BookMarked, Eye, Pencil } from "lucide-react";
+import { Heart, Paintbrush, BookMarked, Eye, Pencil, Maximize, Minimize } from "lucide-react";
 import { useTheme } from "@/lib/themeContext";
 import { getIcon } from "@/lib/iconMap";
+import { useState, useEffect } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { config, setPanelOpen } = useTheme();
   const navItems = config.navItems;
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
 
   return (
     <>
@@ -105,13 +121,17 @@ export default function Sidebar() {
             <p className="text-brown-light text-[10px] font-body leading-tight">built to remember</p>
           </div>
         </div>
-        <button
-          onClick={() => setPanelOpen(true)}
-          className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors"
-          title="Verven"
-        >
-          <Paintbrush size={15} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={toggleFullscreen}
+            className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors">
+            {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+          </button>
+          <button onClick={() => setPanelOpen(true)}
+            className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors"
+            title="Verven">
+            <Paintbrush size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Mobiele bottom nav */}

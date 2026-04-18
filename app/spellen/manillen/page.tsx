@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, Trophy, RotateCcw, ArrowLeft, Maximize, Minimize } from "lucide-react";
+import { RefreshCw, Trophy, RotateCcw, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -259,21 +259,6 @@ export default function ManillenPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
-
-  function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }
 
   const loadGame = useCallback(async () => {
     try {
@@ -529,20 +514,6 @@ export default function ManillenPage() {
 
   return (
     <div className="max-w-lg mx-auto pt-14 md:pt-0 pb-6 px-3 flex flex-col gap-3">
-
-      {/* Floating knoppen rechtsboven — alleen mobiel */}
-      <div className="fixed top-2 right-2 z-50 md:hidden flex gap-2">
-        <Link href="/spellen"
-          className="bg-warm border border-warm/80 rounded-full p-2 shadow-md text-brown-light active:scale-95 transition-transform flex items-center justify-center">
-          <ArrowLeft size={20} />
-        </Link>
-        <button
-          onClick={toggleFullscreen}
-          className="bg-warm border border-warm/80 rounded-full p-2 shadow-md text-brown-light active:scale-95 transition-transform"
-        >
-          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-        </button>
-      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between py-1">
