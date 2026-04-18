@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, Sun, Calendar, Image, PiggyBank, Lightbulb, UtensilsCrossed, Plus, X, GripVertical, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
+import { Heart, Sun, Calendar, Image, Plus, X, GripVertical, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
@@ -81,11 +81,29 @@ export default function HomePage() {
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const touchDragIdx = useRef<number | null>(null);
   const [touchGhost, setTouchGhost] = useState<{ x: number; y: number; label: string } | null>(null);
+  const [crashed, setCrashed] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("home_widgets_v2");
-    if (saved) { try { setWidgets(JSON.parse(saved)); } catch {} }
+    try {
+      const saved = localStorage.getItem("home_widgets_v2");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.every(w => w.id && w.type && w.width)) {
+          setWidgets(parsed);
+        } else {
+          localStorage.removeItem("home_widgets_v2");
+        }
+      }
+    } catch {
+      localStorage.removeItem("home_widgets_v2");
+    }
   }, []);
+
+  function reset() {
+    localStorage.removeItem("home_widgets_v2");
+    setWidgets(DEFAULT_WIDGETS);
+    setCrashed(false);
+  }
 
   function save(next: WidgetConfig[]) {
     setWidgets(next);
@@ -204,6 +222,12 @@ export default function HomePage() {
         <div />
         <div className="flex items-center gap-2">
           {editMode && (
+            <button onClick={reset}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warm text-brown-light text-xs font-semibold hover:text-rose transition-colors border border-warm">
+              ↺ Reset
+            </button>
+          )}
+          {editMode && (
             <button onClick={() => setShowPicker(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sage text-cream text-xs font-semibold hover:bg-sage/80 transition-colors">
               <Plus size={13} /> Widget toevoegen
@@ -218,7 +242,19 @@ export default function HomePage() {
 
       {/* Widget rows */}
       <div className="flex flex-col gap-4">
-        {renderRows()}
+        {crashed
+          ? (
+            <div className="text-center py-16">
+              <p className="text-4xl mb-4">😵</p>
+              <p className="font-display text-xl text-brown mb-2">Er ging iets mis</p>
+              <p className="text-sm text-brown-light mb-6">De widget-layout is hersteld naar de standaard.</p>
+              <button onClick={reset} className="bg-terracotta text-cream rounded-2xl px-6 py-2.5 font-semibold hover:bg-terracotta/80 transition-colors">
+                Herstellen
+              </button>
+            </div>
+          )
+          : renderRows()
+        }
       </div>
 
       {/* Widget picker modal */}
