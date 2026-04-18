@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckSquare, Plus, Trash2, Check, ChevronDown, ChevronUp, Flag } from "lucide-react";
+import { CheckSquare, Plus, Trash2, Check, ChevronDown, ChevronUp, Flag, RefreshCw } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -43,9 +43,14 @@ export default function TakenPage() {
   const [filter, setFilter] = useState<"open" | "gedaan" | "alles">("open");
   const [showDone, setShowDone] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/taken").then((r) => r.json()).then((d) => setTasks(Array.isArray(d) ? d : [])).finally(() => setLoading(false));
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function loadTasks() {
+    setRefreshing(true);
+    await fetch("/api/taken").then((r) => r.json()).then((d) => setTasks(Array.isArray(d) ? d : [])).finally(() => { setLoading(false); setRefreshing(false); });
+  }
+
+  useEffect(() => { loadTasks(); }, []);
 
   async function addTask() {
     if (!form.title.trim()) return;
@@ -101,12 +106,22 @@ export default function TakenPage() {
           <CheckSquare className="text-sage" size={28} />
           <h1 className="font-display text-3xl text-brown">Taken</h1>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-sage text-cream px-4 py-2 rounded-2xl text-sm font-semibold hover:bg-sage/80 transition-colors"
-        >
-          <Plus size={16} /> Nieuwe taak
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadTasks}
+            disabled={refreshing}
+            className="p-2 rounded-xl hover:bg-warm transition-colors text-brown-light disabled:opacity-50"
+            title="Vernieuwen"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 bg-sage text-cream px-4 py-2 rounded-2xl text-sm font-semibold hover:bg-sage/80 transition-colors"
+          >
+            <Plus size={16} /> Nieuwe taak
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

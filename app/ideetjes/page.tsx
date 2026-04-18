@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Lightbulb, Plus, Trash2, Check } from "lucide-react";
+import { Lightbulb, Plus, Trash2, Check, RefreshCw } from "lucide-react";
 
 type Idea = {
   id: string;
@@ -29,13 +29,17 @@ export default function IdeetjesPage() {
   const [category, setCategory] = useState("romantisch");
   const [filter, setFilter] = useState("alles");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/ideas")
+  async function loadIdeas() {
+    setRefreshing(true);
+    await fetch("/api/ideas")
       .then((r) => r.json())
       .then((data) => setIdeas(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => { setLoading(false); setRefreshing(false); });
+  }
+
+  useEffect(() => { loadIdeas(); }, []);
 
   async function addIdea() {
     if (!title.trim()) return;
@@ -77,6 +81,14 @@ export default function IdeetjesPage() {
       <div className="flex items-center gap-3 mb-8">
         <Lightbulb className="text-terracotta" size={28} />
         <h1 className="font-display text-3xl text-brown">Onze Ideetjes</h1>
+        <button
+          onClick={loadIdeas}
+          disabled={refreshing}
+          className="ml-auto p-2 rounded-xl hover:bg-warm transition-colors text-brown-light disabled:opacity-50"
+          title="Vernieuwen"
+        >
+          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+        </button>
       </div>
 
       <div className="bg-warm rounded-3xl p-6 border border-warm mb-8">

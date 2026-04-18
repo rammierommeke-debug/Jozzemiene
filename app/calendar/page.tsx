@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import {
   format,
   startOfMonth,
@@ -28,13 +28,17 @@ export default function CalendarPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newEmoji, setNewEmoji] = useState("📅");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/events")
+  async function loadEvents() {
+    setRefreshing(true);
+    await fetch("/api/events")
       .then((r) => r.json())
       .then((data) => setEvents(data))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => { setLoading(false); setRefreshing(false); });
+  }
+
+  useEffect(() => { loadEvents(); }, []);
 
   const days = eachDayOfInterval({
     start: startOfMonth(currentMonth),
@@ -74,6 +78,14 @@ export default function CalendarPage() {
       <div className="flex items-center gap-3 mb-8">
         <Calendar className="text-sage" size={28} />
         <h1 className="font-display text-3xl text-brown">Our Calendar</h1>
+        <button
+          onClick={loadEvents}
+          disabled={refreshing}
+          className="ml-auto p-2 rounded-xl hover:bg-warm transition-colors text-brown-light disabled:opacity-50"
+          title="Vernieuwen"
+        >
+          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PiggyBank, Plus, Trash2, Euro, TrendingUp, Check, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { PiggyBank, Plus, Trash2, Euro, TrendingUp, Check, CalendarDays, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { format, parseISO, differenceInDays, differenceInWeeks, differenceInCalendarMonths } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -67,12 +67,18 @@ export default function SparenPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [periods, setPeriods] = useState<Record<string, Period>>({});
 
-  useEffect(() => {
-    fetch("/api/savings/goals")
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function loadGoals() {
+    setRefreshing(true);
+    await fetch("/api/savings/goals")
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setGoals(data); })
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+      .finally(() => setRefreshing(false));
+  }
+
+  useEffect(() => { loadGoals(); }, []);
 
   async function createGoal() {
     if (!name.trim() || !target) return;
@@ -130,12 +136,22 @@ export default function SparenPage() {
           <PiggyBank className="text-terracotta" size={28} />
           <h1 className="font-display text-3xl text-brown">Onze Spaarpot</h1>
         </div>
-        <button
-          onClick={() => { setShowForm(!showForm); setTab("doelen"); }}
-          className="flex items-center gap-2 bg-terracotta text-cream px-4 py-2 rounded-2xl text-sm font-semibold hover:bg-terracotta/80 transition-colors"
-        >
-          <Plus size={16} /> Nieuw doel
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadGoals}
+            disabled={refreshing}
+            className="p-2 rounded-xl hover:bg-warm transition-colors text-brown-light disabled:opacity-50"
+            title="Vernieuwen"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          </button>
+          <button
+            onClick={() => { setShowForm(!showForm); setTab("doelen"); }}
+            className="flex items-center gap-2 bg-terracotta text-cream px-4 py-2 rounded-2xl text-sm font-semibold hover:bg-terracotta/80 transition-colors"
+          >
+            <Plus size={16} /> Nieuw doel
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6 bg-warm rounded-2xl p-1">

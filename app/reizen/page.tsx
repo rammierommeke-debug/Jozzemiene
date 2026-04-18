@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plane, Plus, Trash2, ChevronRight } from "lucide-react";
+import { Plane, Plus, Trash2, ChevronRight, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -37,9 +37,14 @@ export default function ReizenPage() {
     dateFrom: "", dateTo: "", description: "", coverColor: "#c2714f",
   });
 
-  useEffect(() => {
-    fetch("/api/trips").then((r) => r.json()).then((d) => setTrips(Array.isArray(d) ? d : [])).finally(() => setLoading(false));
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function loadTrips() {
+    setRefreshing(true);
+    await fetch("/api/trips").then((r) => r.json()).then((d) => setTrips(Array.isArray(d) ? d : [])).finally(() => { setLoading(false); setRefreshing(false); });
+  }
+
+  useEffect(() => { loadTrips(); }, []);
 
   async function createTrip() {
     if (!form.title.trim() || !form.destination.trim()) return;
@@ -63,9 +68,19 @@ export default function ReizenPage() {
           <Plane className="text-terracotta" size={28} />
           <h1 className="font-display text-3xl text-brown">Onze Reizen</h1>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 bg-terracotta text-cream px-4 py-2 rounded-2xl text-sm font-semibold hover:bg-terracotta/80 transition-colors">
-          <Plus size={16} /> Nieuwe reis
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadTrips}
+            disabled={refreshing}
+            className="p-2 rounded-xl hover:bg-warm transition-colors text-brown-light disabled:opacity-50"
+            title="Vernieuwen"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          </button>
+          <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 bg-terracotta text-cream px-4 py-2 rounded-2xl text-sm font-semibold hover:bg-terracotta/80 transition-colors">
+            <Plus size={16} /> Nieuwe reis
+          </button>
+        </div>
       </div>
 
       {/* Nieuwe reis formulier */}

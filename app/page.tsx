@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Sun, Calendar, Image, PiggyBank, Lightbulb, UtensilsCrossed, Plus, X } from "lucide-react";
+import { Heart, Sun, Calendar, Image, PiggyBank, Lightbulb, UtensilsCrossed, Plus, X, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -60,33 +60,36 @@ export default function HomePage() {
   });
 
   const [weather, setWeather] = useState<WeatherDay[]>([]);
-
-  useEffect(() => {
-    fetch("https://api.open-meteo.com/v1/forecast?latitude=51.02&longitude=3.38&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe%2FBrussels&forecast_days=7")
-      .then(r => r.json())
-      .then(d => {
-        const days: WeatherDay[] = d.daily.time.map((date: string, i: number) => ({
-          date,
-          code: d.daily.weathercode[i],
-          max: Math.round(d.daily.temperature_2m_max[i]),
-          min: Math.round(d.daily.temperature_2m_min[i]),
-        }));
-        setWeather(days);
-      })
-      .catch(() => {});
-  }, []);
-
   const [notes, setNotes] = useState<Note[]>([]);
   const [newText, setNewText] = useState("");
   const [newColor, setNewColor] = useState("geel");
   const [adding, setAdding] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/notes")
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setNotes(data); })
-      .catch(() => {});
-  }, []);
+  async function loadAll() {
+    setRefreshing(true);
+    await Promise.all([
+      fetch("https://api.open-meteo.com/v1/forecast?latitude=51.02&longitude=3.38&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe%2FBrussels&forecast_days=7")
+        .then(r => r.json())
+        .then(d => {
+          const days: WeatherDay[] = d.daily.time.map((date: string, i: number) => ({
+            date,
+            code: d.daily.weathercode[i],
+            max: Math.round(d.daily.temperature_2m_max[i]),
+            min: Math.round(d.daily.temperature_2m_min[i]),
+          }));
+          setWeather(days);
+        })
+        .catch(() => {}),
+      fetch("/api/notes")
+        .then((r) => r.json())
+        .then((data) => { if (Array.isArray(data)) setNotes(data); })
+        .catch(() => {}),
+    ]);
+    setRefreshing(false);
+  }
+
+  useEffect(() => { loadAll(); }, []);
 
   async function addNote() {
     if (!newText.trim()) return;
@@ -117,6 +120,14 @@ export default function HomePage() {
           <Sun className="text-terracotta" size={28} />
           <h1 className="font-display text-4xl text-brown">{greeting}</h1>
           <Heart className="text-rose fill-rose" size={24} />
+          <button
+            onClick={loadAll}
+            disabled={refreshing}
+            className="ml-auto p-2 rounded-xl hover:bg-warm transition-colors text-brown-light disabled:opacity-50"
+            title="Vernieuwen"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          </button>
         </div>
         <p className="font-handwriting text-xl text-brown-light ml-1 capitalize">{dateStr}</p>
         {weather.length > 0 && (
