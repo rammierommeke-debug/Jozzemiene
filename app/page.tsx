@@ -75,9 +75,10 @@ function weatherIcon(code: number) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const user = (session?.user?.name as "roel" | "emma" | null) ?? null;
   const userRef = useRef<"roel" | "emma" | null>(null);
+  const widgetsRef = useRef<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -97,6 +98,7 @@ export default function HomePage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.every((w: WidgetConfig) => w.id && w.type && w.width)) {
+          widgetsRef.current = parsed;
           setWidgets(parsed);
         } else {
           localStorage.removeItem(widgetKey(user));
@@ -116,6 +118,7 @@ export default function HomePage() {
   }
 
   function save(next: WidgetConfig[]) {
+    widgetsRef.current = next;
     setWidgets(next);
     if (user) localStorage.setItem(widgetKey(user), JSON.stringify(next));
   }
@@ -138,7 +141,9 @@ export default function HomePage() {
     dragFromIdx.current = idx;
     dropIdxRef.current = null;
     setIsDragging(true);
-    setGhost({ x, y, label: WIDGET_META[widgets[idx].type].emoji + " " + WIDGET_META[widgets[idx].type].label });
+    const w = widgetsRef.current[idx];
+    if (!w) return;
+    setGhost({ x, y, label: WIDGET_META[w.type].emoji + " " + WIDGET_META[w.type].label });
   }
 
   useEffect(() => {
@@ -156,14 +161,13 @@ export default function HomePage() {
       const from = dragFromIdx.current;
       const to = dropIdxRef.current;
       if (from !== null && to !== null && from !== to) {
-        setWidgets(prev => {
-          const next = [...prev];
-          const [moved] = next.splice(from, 1);
-          next.splice(to, 0, moved);
-          const u = userRef.current;
-          if (u) localStorage.setItem(`home_widgets_v2_${u}`, JSON.stringify(next));
-          return next;
-        });
+        const next = [...widgetsRef.current];
+        const [moved] = next.splice(from, 1);
+        next.splice(to, 0, moved);
+        widgetsRef.current = next;
+        setWidgets(next);
+        const u = userRef.current;
+        if (u) localStorage.setItem(`home_widgets_v2_${u}`, JSON.stringify(next));
       }
       dragFromIdx.current = null;
       dropIdxRef.current = null;
@@ -228,6 +232,12 @@ export default function HomePage() {
     }
     return rows;
   }
+
+  if (status === "loading") return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="w-8 h-8 border-4 border-terracotta/30 border-t-terracotta rounded-full animate-spin" />
+    </div>
+  );
 
   if (!user) return null;
 
