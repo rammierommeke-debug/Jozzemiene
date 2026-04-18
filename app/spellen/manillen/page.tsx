@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, Trophy, RotateCcw, ArrowLeft } from "lucide-react";
+import { RefreshCw, Trophy, RotateCcw, ArrowLeft, Maximize, Minimize } from "lucide-react";
 import Link from "next/link";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -259,6 +259,21 @@ export default function ManillenPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
 
   const loadGame = useCallback(async () => {
     try {
@@ -531,6 +546,9 @@ export default function ManillenPage() {
           <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta underline">Speel als {PNAME[opp]}</button>
           <button onClick={() => startNewGame()} className="flex items-center gap-1 text-xs text-brown-light hover:text-rose transition-colors">
             <RotateCcw size={12} /> Nieuw
+          </button>
+          <button onClick={toggleFullscreen} className="text-brown-light hover:text-terracotta transition-colors">
+            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
           </button>
         </div>
       </div>
