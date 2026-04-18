@@ -122,6 +122,9 @@ export default function HomePage() {
   }
 
   function removeWidget(id: string) { save(widgets.filter(w => w.id !== id)); }
+  function updateWidget(id: string, patch: Partial<WidgetConfig>) {
+    save(widgets.map(w => w.id === id ? { ...w, ...patch } : w));
+  }
   function toggleWidth(id: string) {
     save(widgets.map(w => w.id === id ? { ...w, width: w.width === "full" ? "half" : "full" } : w));
   }
@@ -189,6 +192,7 @@ export default function HomePage() {
                 isDragOver={dragOverIdx === i + offset}
                 onRemove={() => removeWidget(ww.id)}
                 onToggleWidth={() => toggleWidth(ww.id)}
+                onUpdate={patch => updateWidget(ww.id, patch)}
                 onDragStart={() => onDragStart(i + offset)}
                 onDragOver={e => onDragOver(e, i + offset)}
                 onDrop={() => onDrop(i + offset)}
@@ -206,6 +210,7 @@ export default function HomePage() {
             isDragOver={isDragOver}
             onRemove={() => removeWidget(w.id)}
             onToggleWidth={() => toggleWidth(w.id)}
+            onUpdate={patch => updateWidget(w.id, patch)}
             onDragStart={() => onDragStart(i)}
             onDragOver={e => onDragOver(e, i)}
             onDrop={() => onDrop(i)}
@@ -322,9 +327,9 @@ export default function HomePage() {
 
 // ── Widget Shell (drag wrapper + edit controls) ───────────────────────────────
 
-function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidth, onDragStart, onDragOver, onDrop, onTouchStart, onTouchMove, onTouchEnd }: {
+function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidth, onUpdate, onDragStart, onDragOver, onDrop, onTouchStart, onTouchMove, onTouchEnd }: {
   widget: WidgetConfig; idx: number; editMode: boolean; isDragOver: boolean;
-  onRemove: () => void; onToggleWidth: () => void;
+  onRemove: () => void; onToggleWidth: () => void; onUpdate: (patch: Partial<WidgetConfig>) => void;
   onDragStart: () => void; onDragOver: (e: React.DragEvent) => void; onDrop: () => void;
   onTouchStart: (e: React.TouchEvent) => void; onTouchMove: (e: React.TouchEvent) => void; onTouchEnd: () => void;
 }) {
@@ -361,23 +366,23 @@ function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidt
           </div>
         </div>
       )}
-      <WidgetContent widget={widget} editMode={editMode} />
+      <WidgetContent widget={widget} editMode={editMode} onUpdate={onUpdate} />
     </div>
   );
 }
 
 // ── Widget Content Router ─────────────────────────────────────────────────────
 
-function WidgetContent({ widget, editMode }: { widget: WidgetConfig; editMode: boolean }) {
+function WidgetContent({ widget, editMode, onUpdate }: { widget: WidgetConfig; editMode: boolean; onUpdate: (patch: Partial<WidgetConfig>) => void }) {
   switch (widget.type) {
     case "greeting":       return <GreetingWidget />;
     case "weather":        return <WeatherWidget />;
     case "notes":          return <NotesWidget />;
     case "quicklinks":     return <QuickLinksWidget />;
     case "upcoming":       return <UpcomingWidget />;
-    case "photo-carousel": return <PhotoCarouselWidget albumId={widget.albumId} widgetId={widget.id} />;
+    case "photo-carousel": return <PhotoCarouselWidget albumId={widget.albumId} onUpdate={onUpdate} />;
     case "diary":          return <DiaryWidget widgetId={widget.id} />;
-    case "quote":          return <QuoteWidget widgetId={widget.id} initial={{ text: widget.quoteText ?? "", author: widget.quoteAuthor ?? "" }} />;
+    case "quote":          return <QuoteWidget initial={{ text: widget.quoteText ?? "", author: widget.quoteAuthor ?? "" }} onUpdate={onUpdate} />;
     default:               return null;
   }
 }
@@ -567,7 +572,7 @@ function NotesWidget() {
 
 // ── Photo Carousel ────────────────────────────────────────────────────────────
 
-function PhotoCarouselWidget({ albumId, widgetId }: { albumId?: string; widgetId: string }) {
+function PhotoCarouselWidget({ albumId, onUpdate }: { albumId?: string; onUpdate: (patch: Partial<WidgetConfig>) => void }) {
   const [photos, setPhotos] = useState<{ id: string; url: string; caption: string }[]>([]);
   const [albums, setAlbums] = useState<{ id: string; name: string; emoji: string }[]>([]);
   const [chosenAlbum, setChosenAlbum] = useState(albumId ?? "");
@@ -583,15 +588,8 @@ function PhotoCarouselWidget({ albumId, widgetId }: { albumId?: string; widgetId
     fetch("/api/photos").then(r => r.json()).then(d => {
       if (Array.isArray(d)) setPhotos(d.filter((p: { album_id: string }) => p.album_id === chosenAlbum));
     });
-    // Save album choice
-    const saved = localStorage.getItem("home_widgets_v2");
-    if (saved) {
-      try {
-        const ws = JSON.parse(saved);
-        localStorage.setItem("home_widgets_v2", JSON.stringify(ws.map((w: WidgetConfig) => w.id === widgetId ? { ...w, albumId: chosenAlbum } : w)));
-      } catch {}
-    }
-  }, [chosenAlbum, widgetId]);
+    onUpdate({ albumId: chosenAlbum });
+  }, [chosenAlbum]);
 
   if (picking) return (
     <div className="bg-warm rounded-3xl border border-warm p-5">
@@ -700,19 +698,13 @@ function DiaryWidget({ widgetId }: { widgetId: string }) {
 
 // ── Quote ─────────────────────────────────────────────────────────────────────
 
-function QuoteWidget({ widgetId, initial }: { widgetId: string; initial: { text: string; author: string } }) {
+function QuoteWidget({ initial, onUpdate }: { initial: { text: string; author: string }; onUpdate: (patch: Partial<WidgetConfig>) => void }) {
   const [editing, setEditing] = useState(!initial.text);
   const [text, setText] = useState(initial.text || "Voeg hier een citaat of mooie tekst toe...");
   const [author, setAuthor] = useState(initial.author || "");
 
   function save() {
-    const saved = localStorage.getItem("home_widgets_v2");
-    if (saved) {
-      try {
-        const ws = JSON.parse(saved);
-        localStorage.setItem("home_widgets_v2", JSON.stringify(ws.map((w: WidgetConfig) => w.id === widgetId ? { ...w, quoteText: text, quoteAuthor: author } : w)));
-      } catch {}
-    }
+    onUpdate({ quoteText: text, quoteAuthor: author });
     setEditing(false);
   }
 
