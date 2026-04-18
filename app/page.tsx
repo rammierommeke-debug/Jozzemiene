@@ -161,15 +161,18 @@ export default function HomePage() {
 
   const onTouchEndW = useCallback(() => {
     if (touchDragIdx.current !== null && dragOverIdx !== null && touchDragIdx.current !== dragOverIdx) {
-      const next = [...widgets];
-      const [moved] = next.splice(touchDragIdx.current, 1);
-      next.splice(dragOverIdx, 0, moved);
-      save(next);
+      setWidgets(prev => {
+        const next = [...prev];
+        const [moved] = next.splice(touchDragIdx.current!, 1);
+        next.splice(dragOverIdx, 0, moved);
+        if (user) localStorage.setItem(widgetKey(user), JSON.stringify(next));
+        return next;
+      });
     }
     touchDragIdx.current = null;
     setTouchGhost(null);
     setDragOverIdx(null);
-  }, [dragOverIdx, widgets]);
+  }, [dragOverIdx, user]);
 
   // ── Layout grouping (pair consecutive halves) ─────────────────────────────
   function renderRows() {
@@ -328,6 +331,7 @@ function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidt
   return (
     <div data-widget-idx={idx}
       className={`relative rounded-3xl transition-all duration-150 ${isDragOver ? "ring-2 ring-terracotta scale-[1.01]" : ""} ${editMode ? "ring-2 ring-dashed ring-brown-light/30" : ""}`}
+      style={editMode ? { touchAction: "none" } : undefined}
       draggable={editMode}
       onDragStart={editMode ? onDragStart : undefined}
       onDragOver={editMode ? onDragOver : undefined}
