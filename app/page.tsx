@@ -74,9 +74,7 @@ function weatherIcon(code: number) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [user, setUser] = useState<"roel" | "emma" | null>(() =>
-    typeof window !== "undefined" ? (localStorage.getItem("home_user") as "roel" | "emma" | null) : null
-  );
+  const [user, setUser] = useState<"roel" | "emma" | null>(null);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -107,7 +105,6 @@ export default function HomePage() {
   }, [user]);
 
   function chooseUser(u: "roel" | "emma") {
-    localStorage.setItem("home_user", u);
     setUser(u);
   }
 
