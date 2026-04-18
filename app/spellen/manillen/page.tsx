@@ -530,6 +530,14 @@ export default function ManillenPage() {
   return (
     <div className="max-w-lg mx-auto pt-14 md:pt-0 pb-6 px-3 flex flex-col gap-3">
 
+      {/* Fullscreen knop — fixed zodat hij altijd zichtbaar is op mobiel */}
+      <button
+        onClick={toggleFullscreen}
+        className="fixed top-2 right-2 z-50 md:hidden bg-warm border border-warm/80 rounded-full p-2 shadow-md text-brown-light active:scale-95 transition-transform"
+      >
+        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+      </button>
+
       {/* Header */}
       <div className="flex items-center justify-between py-1">
         <div className="flex items-center gap-2">
@@ -546,9 +554,6 @@ export default function ManillenPage() {
           <button onClick={() => setMe(opp)} className="text-xs text-brown-light hover:text-terracotta underline">Speel als {PNAME[opp]}</button>
           <button onClick={() => startNewGame()} className="flex items-center gap-1 text-xs text-brown-light hover:text-rose transition-colors">
             <RotateCcw size={12} /> Nieuw
-          </button>
-          <button onClick={toggleFullscreen} className="text-brown-light hover:text-terracotta transition-colors">
-            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
           </button>
         </div>
       </div>
