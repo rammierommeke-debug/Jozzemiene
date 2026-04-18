@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { Heart, Sun, Calendar, Image, Plus, X, GripVertical, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -243,12 +243,7 @@ export default function HomePage() {
       )}
 
       {/* Edit bar */}
-      <div className="flex items-center justify-between mb-6">
-        <div />
-        <button onClick={() => signOut({ callbackUrl: "/login" })}
-          className={`text-xs font-semibold transition-colors hover:text-terracotta ${user === "emma" ? "text-rose" : "text-blue-400"}`}>
-          {user === "emma" ? "Emma" : "Roel"} · Uitloggen
-        </button>
+      <div className="flex items-center justify-end mb-6">
         <div className="flex items-center gap-2">
           {editMode && (
             <button onClick={reset}

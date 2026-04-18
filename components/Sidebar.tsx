@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Paintbrush, BookMarked, Eye, Pencil, Maximize, Minimize, Camera, Check, Loader } from "lucide-react";
+import { Heart, Paintbrush, BookMarked, Eye, Pencil, Maximize, Minimize, Camera, Check, Loader, LogOut } from "lucide-react";
 import { useTheme } from "@/lib/themeContext";
 import { getIcon } from "@/lib/iconMap";
 import { useState, useEffect, useRef } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Sidebar() {
   const pathname = usePathname();
   if (pathname === "/login") return null;
   const { config, setPanelOpen } = useTheme();
+  const { data: session } = useSession();
   const navItems = config.navItems;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasNewEvents, setHasNewEvents] = useState(false);
@@ -166,8 +168,16 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-warm">
-          <p className="text-brown-light text-xs font-body text-center">gemaakt met liefde 🌿</p>
+        <div className="p-4 border-t border-warm flex items-center justify-between">
+          <p className="text-brown-light text-xs font-body">gemaakt met liefde 🌿</p>
+          {session && (
+            <button onClick={() => signOut({ callbackUrl: "/login" })}
+              title="Uitloggen"
+              className="flex items-center gap-1.5 text-brown-light hover:text-terracotta transition-colors text-xs font-semibold">
+              <LogOut size={14} />
+              {session.user?.name === "roel" ? "Roel" : "Emma"}
+            </button>
+          )}
         </div>
       </aside>
 
@@ -230,6 +240,13 @@ export default function Sidebar() {
               </Link>
             );
           })}
+          {session && (
+            <button onClick={() => signOut({ callbackUrl: "/login" })}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-brown-light shrink-0">
+              <LogOut size={20} />
+              <span className="text-[9px] font-semibold leading-none">Uit</span>
+            </button>
+          )}
         </div>
       </nav>
     </>
