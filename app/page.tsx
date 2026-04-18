@@ -74,6 +74,7 @@ function weatherIcon(code: number) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
+  const [user, setUser] = useState<"roel" | "emma" | null>(null);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -83,31 +84,41 @@ export default function HomePage() {
   const [touchGhost, setTouchGhost] = useState<{ x: number; y: number; label: string } | null>(null);
   const [crashed, setCrashed] = useState(false);
 
+  const widgetKey = (u: string) => `home_widgets_v2_${u}`;
+
   useEffect(() => {
+    const savedUser = localStorage.getItem("home_user") as "roel" | "emma" | null;
+    setUser(savedUser);
+    if (!savedUser) return;
     try {
-      const saved = localStorage.getItem("home_widgets_v2");
+      const saved = localStorage.getItem(widgetKey(savedUser));
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.every(w => w.id && w.type && w.width)) {
+        if (Array.isArray(parsed) && parsed.every((w: WidgetConfig) => w.id && w.type && w.width)) {
           setWidgets(parsed);
         } else {
-          localStorage.removeItem("home_widgets_v2");
+          localStorage.removeItem(widgetKey(savedUser));
         }
       }
     } catch {
-      localStorage.removeItem("home_widgets_v2");
+      localStorage.removeItem(widgetKey(savedUser));
     }
   }, []);
 
+  function chooseUser(u: "roel" | "emma") {
+    localStorage.setItem("home_user", u);
+    setUser(u);
+  }
+
   function reset() {
-    localStorage.removeItem("home_widgets_v2");
+    if (user) localStorage.removeItem(widgetKey(user));
     setWidgets(DEFAULT_WIDGETS);
     setCrashed(false);
   }
 
   function save(next: WidgetConfig[]) {
     setWidgets(next);
-    localStorage.setItem("home_widgets_v2", JSON.stringify(next));
+    if (user) localStorage.setItem(widgetKey(user), JSON.stringify(next));
   }
 
   function removeWidget(id: string) { save(widgets.filter(w => w.id !== id)); }
@@ -206,6 +217,24 @@ export default function HomePage() {
     return rows;
   }
 
+  if (!user) return (
+    <div className="max-w-sm mx-auto pt-24 px-4 flex flex-col items-center gap-6">
+      <div className="text-center">
+        <p className="text-5xl mb-3">🏠</p>
+        <h1 className="font-display text-3xl text-brown mb-1">Jouw home</h1>
+        <p className="text-brown-light text-sm">Wie ben jij? Elke persoon heeft zijn eigen pagina.</p>
+      </div>
+      <div className="flex gap-4 w-full">
+        {(["emma", "roel"] as const).map(u => (
+          <button key={u} onClick={() => chooseUser(u)}
+            className={`flex-1 rounded-2xl py-5 font-display text-xl border-2 transition-all hover:scale-105 ${u === "emma" ? "bg-rose/10 border-rose/30 text-rose" : "bg-blue-50 border-blue-200 text-blue-500"}`}>
+            {u === "emma" ? "Emma" : "Roel"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="max-w-3xl mx-auto pt-14 md:pt-0 pb-10">
 
@@ -220,6 +249,10 @@ export default function HomePage() {
       {/* Edit bar */}
       <div className="flex items-center justify-between mb-6">
         <div />
+        <button onClick={() => { localStorage.removeItem("home_user"); setUser(null); setEditMode(false); }}
+          className={`text-xs text-brown-light hover:text-terracotta transition-colors font-semibold ${user === "emma" ? "text-rose" : "text-blue-400"}`}>
+          {user === "emma" ? "Emma" : "Roel"} ↓
+        </button>
         <div className="flex items-center gap-2">
           {editMode && (
             <button onClick={reset}
