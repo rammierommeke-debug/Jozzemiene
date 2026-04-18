@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Pencil, X, Share2 } from "lucide-react";
+import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Pencil, X, Share2, CalendarPlus } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO,
@@ -146,6 +146,20 @@ function KalenderInner() {
   }
 
   const [shareTarget, setShareTarget] = useState<string | null>(null);
+  const [showCalShare, setShowCalShare] = useState(false);
+
+  function calShareUrl() {
+    return `${window.location.origin}/api/events/ical`;
+  }
+  function addToGoogle() {
+    window.open(`https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(calShareUrl())}`, "_blank");
+  }
+  function addToOutlook() {
+    window.open(`https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(calShareUrl())}`, "_blank");
+  }
+  function downloadIcs() {
+    window.open(calShareUrl(), "_blank");
+  }
 
   function shareVia(ev: Event, via: "gmail" | "outlook") {
     const dateStr = format(parseISO(ev.date), "EEEE d MMMM yyyy", { locale: nl });
@@ -234,7 +248,50 @@ function KalenderInner() {
             <Calendar className="text-sage" size={28} />
             <h1 className="font-display text-3xl text-brown">Onze Kalender</h1>
           </div>
+          <button onClick={() => setShowCalShare(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cream border border-warm text-sm font-semibold text-brown-light hover:border-sage hover:text-sage transition-colors">
+            <CalendarPlus size={15} /> Synchroniseer
+          </button>
         </div>
+
+        {/* Kalender-sync modal */}
+        {showCalShare && (
+          <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowCalShare(false)}>
+            <div className="bg-cream rounded-3xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-warm">
+                <p className="font-display text-lg text-brown">Kalender synchroniseren</p>
+                <button onClick={() => setShowCalShare(false)} className="text-brown-light hover:text-rose"><X size={18} /></button>
+              </div>
+              <div className="p-5 flex flex-col gap-3">
+                <p className="text-sm text-brown-light">Voeg onze kalender toe aan jouw agenda-app. Nieuwe afspraken verschijnen automatisch.</p>
+                <button onClick={addToGoogle}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-white border border-warm hover:border-blue-300 hover:bg-blue-50 transition-colors text-left">
+                  <span className="text-2xl">📅</span>
+                  <div>
+                    <p className="text-sm font-semibold text-brown">Google Calendar</p>
+                    <p className="text-xs text-brown-light">Abonneer via Google</p>
+                  </div>
+                </button>
+                <button onClick={addToOutlook}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-white border border-warm hover:border-blue-300 hover:bg-blue-50 transition-colors text-left">
+                  <span className="text-2xl">📧</span>
+                  <div>
+                    <p className="text-sm font-semibold text-brown">Outlook</p>
+                    <p className="text-xs text-brown-light">Abonneer via Outlook</p>
+                  </div>
+                </button>
+                <button onClick={downloadIcs}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-warm hover:bg-warm/60 transition-colors text-left">
+                  <span className="text-2xl">⬇️</span>
+                  <div>
+                    <p className="text-sm font-semibold text-brown">Download .ics</p>
+                    <p className="text-xs text-brown-light">Importeer in elke agenda-app</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Maand navigatie + multi-select toggle */}
         <div className="flex items-center justify-between mb-4">
