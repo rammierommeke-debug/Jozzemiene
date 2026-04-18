@@ -47,7 +47,7 @@ export default function FeedbackPage() {
   }
 
   const issueUrl = (t: string) =>
-    `https://github.com/rammierommeke-debug/Jozzemiene/issues/new?body=${encodeURIComponent(t)}`;
+    `https://github.com/rammierommeke-debug/Jozzemiene/issues/new?body=${encodeURIComponent(`@claude ${t}`)}`;
 
   return (
     <div className="max-w-lg mx-auto pt-14 md:pt-0 px-4 pb-8">
