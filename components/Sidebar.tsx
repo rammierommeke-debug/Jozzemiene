@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Paintbrush, BookMarked, Eye, Pencil, Maximize, Minimize } from "lucide-react";
+import { Heart, Paintbrush, BookMarked, Eye, Pencil, Maximize, Minimize, Camera, Check, Loader } from "lucide-react";
 import { useTheme } from "@/lib/themeContext";
 import { getIcon } from "@/lib/iconMap";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -13,6 +13,39 @@ export default function Sidebar() {
   const navItems = config.navItems;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasNewEvents, setHasNewEvents] = useState(false);
+  const [camStatus, setCamStatus] = useState<"idle" | "uploading" | "done">("idle");
+  const cameraRef = useRef<HTMLInputElement>(null);
+
+  async function handleCapture(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCamStatus("uploading");
+    try {
+      const albums = await fetch("/api/albums").then(r => r.json());
+      let albumId = albums.find((a: { name: string; id: string }) => a.name.toLowerCase() === "live gallery")?.id;
+      if (!albumId) {
+        const created = await fetch("/api/albums", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Live Gallery", emoji: "📷" }),
+        }).then(r => r.json());
+        albumId = created.id;
+      }
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const { signedUrl, filename } = await fetch("/api/photos/presign", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ext }),
+      }).then(r => r.json());
+      await fetch(signedUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      await fetch("/api/photos", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: `${supabaseUrl}/storage/v1/object/public/uploads/${filename}`, caption: "", album_id: albumId }),
+      });
+      setCamStatus("done");
+      setTimeout(() => setCamStatus("idle"), 2500);
+    } catch { setCamStatus("idle"); }
+    if (cameraRef.current) cameraRef.current.value = "";
+  }
 
   useEffect(() => {
     async function checkNew() {
@@ -150,6 +183,11 @@ export default function Sidebar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
+          <button onClick={() => cameraRef.current?.click()} disabled={camStatus === "uploading"}
+            className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors disabled:opacity-50">
+            {camStatus === "uploading" ? <Loader size={15} className="animate-spin" /> : camStatus === "done" ? <Check size={15} className="text-sage" /> : <Camera size={15} />}
+          </button>
           <button onClick={toggleFullscreen}
             className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors">
             {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}

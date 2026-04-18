@@ -4,7 +4,6 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import VervenPanel from "@/components/VervenPanel";
 import AskClaudeButton from "@/components/AskClaudeButton";
-import CameraButton from "@/components/CameraButton";
 import { ThemeProvider } from "@/lib/themeContext";
 
 const playfair = Playfair_Display({
@@ -43,7 +42,6 @@ export default function RootLayout({
             {children}
           </main>
           <AskClaudeButton />
-          <CameraButton />
         </ThemeProvider>
       </body>
     </html>
