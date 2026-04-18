@@ -16,7 +16,7 @@ export function GET() {
     client_id: clientId,
     response_type: "code",
     redirect_uri: redirectUri,
-    scope: "user-read-currently-playing user-read-playback-state",
+    scope: "user-read-currently-playing user-read-playback-state user-modify-playback-state",
   });
   return NextResponse.redirect(`https://accounts.spotify.com/authorize?${params}`);
 }
