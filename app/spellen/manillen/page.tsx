@@ -225,7 +225,6 @@ function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, trump
   if (!slot.open && !slot.hidden) {
     return <div className="w-14 h-20 rounded-xl border-2 border-dashed border-gray-200 opacity-30 shrink-0" />;
   }
-  const openIsTrump = !!trump && slot.open?.suit === trump;
   return (
     <div className="relative shrink-0" style={{ width: 56, height: showHidden && slot.hidden ? 88 : 80 }}>
       {slot.hidden && (
@@ -244,7 +243,7 @@ function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, trump
             disabled={!canPlay || illegal}
             illegal={illegal}
             onClick={canPlay && !illegal ? onPlay : undefined}
-            isTrump={openIsTrump}
+            isTrump={false}
           />
         </div>
       )}
