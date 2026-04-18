@@ -226,14 +226,12 @@ function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, trump
     return <div className="w-14 h-20 rounded-xl border-2 border-dashed border-gray-200 opacity-30 shrink-0" />;
   }
   const openIsTrump = !!trump && slot.open?.suit === trump;
-  // Hidden kaart mag nooit gehighlight worden zolang er een open kaart bovenop ligt
-  const hiddenIsTrump = !!trump && !slot.open && slot.hidden?.suit === trump;
   return (
     <div className="relative shrink-0" style={{ width: 56, height: showHidden && slot.hidden ? 88 : 80 }}>
       {slot.hidden && (
         <div className="absolute bottom-0 left-0">
           {showHidden
-            ? <CardFace card={slot.hidden} disabled isTrump={hiddenIsTrump} />
+            ? <CardFace card={slot.hidden} disabled isTrump={false} />
             : <CardBack />
           }
         </div>
