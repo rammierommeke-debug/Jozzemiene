@@ -40,11 +40,27 @@ export async function POST(req: NextRequest) {
   const { uri } = await req.json().then((b: { action: string; uri?: string }) => b).catch(() => ({ action, uri: undefined }));
 
   if (action === "play_uri" && uri) {
-    await fetch("https://api.spotify.com/v1/me/player/play", {
+    // Get active device first
+    const devRes = await fetch("https://api.spotify.com/v1/me/player/devices", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const devData = devRes.ok ? await devRes.json() : { devices: [] };
+    const device = devData.devices?.find((d: { is_active: boolean }) => d.is_active)
+      ?? devData.devices?.[0];
+
+    const playUrl = device
+      ? `https://api.spotify.com/v1/me/player/play?device_id=${device.id}`
+      : "https://api.spotify.com/v1/me/player/play";
+
+    const playRes = await fetch(playUrl, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ uris: [uri] }),
     });
+    if (!playRes.ok && playRes.status !== 204) {
+      const err = await playRes.json().catch(() => ({}));
+      return NextResponse.json({ error: err }, { status: playRes.status });
+    }
     return NextResponse.json({ ok: true });
   }
 
