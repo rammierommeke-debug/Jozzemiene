@@ -3,6 +3,7 @@ import { Playfair_Display, Lato, Caveat } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import VervenPanel from "@/components/VervenPanel";
+import AskClaudeButton from "@/components/AskClaudeButton";
 import { ThemeProvider } from "@/lib/themeContext";
 
 const playfair = Playfair_Display({
@@ -40,6 +41,7 @@ export default function RootLayout({
           <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen pb-24 md:pb-8">
             {children}
           </main>
+          <AskClaudeButton />
         </ThemeProvider>
       </body>
     </html>
