@@ -151,8 +151,10 @@ export default function HomePage() {
 
     function move(x: number, y: number) {
       setGhost(prev => prev ? { ...prev, x, y } : null);
-      const el = document.elementFromPoint(x, y)?.closest("[data-widget-idx]") as HTMLElement | null;
-      const idx = el ? Number(el.dataset.widgetIdx) : null;
+      const hit = document.elementFromPoint(x, y);
+      const el = hit?.closest("[data-widget-idx]") as HTMLElement | null;
+      const raw = el?.dataset.widgetIdx;
+      const idx = raw !== undefined ? Number(raw) : null;
       dropIdxRef.current = idx;
       setDropHighlight(idx);
     }
@@ -162,8 +164,8 @@ export default function HomePage() {
       const to = dropIdxRef.current;
       if (from !== null && to !== null && from !== to) {
         const next = [...widgetsRef.current];
-        const [moved] = next.splice(from, 1);
-        next.splice(to, 0, moved);
+        // swap: wissel de twee posities
+        [next[from], next[to]] = [next[to], next[from]];
         widgetsRef.current = next;
         setWidgets(next);
         const u = userRef.current;
