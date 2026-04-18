@@ -530,13 +530,19 @@ export default function ManillenPage() {
   return (
     <div className="max-w-lg mx-auto pt-14 md:pt-0 pb-6 px-3 flex flex-col gap-3">
 
-      {/* Fullscreen knop — fixed zodat hij altijd zichtbaar is op mobiel */}
-      <button
-        onClick={toggleFullscreen}
-        className="fixed top-2 right-2 z-50 md:hidden bg-warm border border-warm/80 rounded-full p-2 shadow-md text-brown-light active:scale-95 transition-transform"
-      >
-        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-      </button>
+      {/* Floating knoppen rechtsboven — alleen mobiel */}
+      <div className="fixed top-2 right-2 z-50 md:hidden flex gap-2">
+        <Link href="/spellen"
+          className="bg-warm border border-warm/80 rounded-full p-2 shadow-md text-brown-light active:scale-95 transition-transform flex items-center justify-center">
+          <ArrowLeft size={20} />
+        </Link>
+        <button
+          onClick={toggleFullscreen}
+          className="bg-warm border border-warm/80 rounded-full p-2 shadow-md text-brown-light active:scale-95 transition-transform"
+        >
+          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+        </button>
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between py-1">

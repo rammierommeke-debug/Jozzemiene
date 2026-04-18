@@ -17,6 +17,13 @@
   --font-handwriting: "Caveat", cursive;
 }
 
+/* Verberg mobiele navigatie tijdens fullscreen */
+:fullscreen nav,
+:-webkit-full-screen nav,
+:-moz-full-screen nav {
+  display: none !important;
+}
+
 @layer base {
   html {
     background-color: var(--color-cream);
