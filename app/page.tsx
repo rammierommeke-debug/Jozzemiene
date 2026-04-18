@@ -205,28 +205,33 @@ export default function HomePage() {
     while (i < widgets.length) {
       const w = widgets[i];
       if (w.width === "half" && i + 1 < widgets.length && widgets[i + 1].width === "half") {
+        const rowStart = i; // capture by value
         rows.push(
-          <div key={`row-${i}`} className="grid grid-cols-2 gap-4">
-            {[widgets[i], widgets[i + 1]].map((ww, offset) => (
-              <WidgetShell key={ww.id} widget={ww} idx={i + offset} editMode={editMode}
-                isDragOver={dropHighlight === i + offset}
-                onRemove={() => removeWidget(ww.id)}
-                onToggleWidth={() => toggleWidth(ww.id)}
-                onUpdate={patch => updateWidget(ww.id, patch)}
-                onGripDown={(x, y) => startDrag(i + offset, x, y)}
-              />
-            ))}
+          <div key={`row-${rowStart}`} className="grid grid-cols-2 gap-4">
+            {[widgets[rowStart], widgets[rowStart + 1]].map((ww, offset) => {
+              const idx = rowStart + offset; // capture by value
+              return (
+                <WidgetShell key={ww.id} widget={ww} idx={idx} editMode={editMode}
+                  isDragOver={dropHighlight === idx}
+                  onRemove={() => removeWidget(ww.id)}
+                  onToggleWidth={() => toggleWidth(ww.id)}
+                  onUpdate={patch => updateWidget(ww.id, patch)}
+                  onGripDown={(x, y) => startDrag(idx, x, y)}
+                />
+              );
+            })}
           </div>
         );
         i += 2;
       } else {
+        const idx = i; // capture by value
         rows.push(
-          <WidgetShell key={w.id} widget={w} idx={i} editMode={editMode}
-            isDragOver={dropHighlight === i}
+          <WidgetShell key={w.id} widget={w} idx={idx} editMode={editMode}
+            isDragOver={dropHighlight === idx}
             onRemove={() => removeWidget(w.id)}
             onToggleWidth={() => toggleWidth(w.id)}
             onUpdate={patch => updateWidget(w.id, patch)}
-            onGripDown={(x, y) => startDrag(i, x, y)}
+            onGripDown={(x, y) => startDrag(idx, x, y)}
           />
         );
         i += 1;
