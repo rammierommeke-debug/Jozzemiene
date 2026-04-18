@@ -228,11 +228,11 @@ function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, isTru
   }
   return (
     <div className="relative shrink-0" style={{ width: 56, height: showHidden && slot.hidden ? 88 : 80 }}>
-      {/* Hidden card peeking underneath */}
+      {/* Hidden card peeking underneath — geen trump-highlight zolang open kaart er bovenop zit */}
       {slot.hidden && (
         <div className="absolute bottom-0 left-0">
           {showHidden
-            ? <CardFace card={slot.hidden} disabled isTrump={isTrump} />
+            ? <CardFace card={slot.hidden} disabled isTrump={!slot.open && isTrump} />
             : <CardBack />
           }
         </div>
@@ -243,9 +243,9 @@ function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, isTru
           <CardFace
             card={slot.open}
             selected={selected}
-            disabled={!canPlay}
+            disabled={!canPlay || illegal}
             illegal={illegal}
-            onClick={canPlay ? onPlay : undefined}
+            onClick={canPlay && !illegal ? onPlay : undefined}
             isTrump={isTrump}
           />
         </div>
@@ -625,7 +625,7 @@ export default function ManillenPage() {
                 illegal={isIllegal}
                 onPlay={() => topCard && handleCardClick(topCard)}
                 showHidden
-                isTrump={game.trump ? (slot.open?.suit === game.trump || slot.hidden?.suit === game.trump) : false}
+                isTrump={game.trump ? slot.open?.suit === game.trump : false}
               />
             );
           })}
@@ -638,10 +638,10 @@ export default function ManillenPage() {
               return (
                 <CardFace key={c.id} card={c}
                   selected={selected === c.id}
-                  disabled={!isMyTurn || !!myPlayedCard}
+                  disabled={!isMyTurn || !!myPlayedCard || isIllegal}
                   illegal={isIllegal}
                   isTrump={game.trump === c.suit}
-                  onClick={() => handleCardClick(c)} />
+                  onClick={!isIllegal ? () => handleCardClick(c) : undefined} />
               );
             })}
           </div>
