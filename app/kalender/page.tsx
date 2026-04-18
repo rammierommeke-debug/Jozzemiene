@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Pencil, X } from "lucide-react";
+import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays, Clock, Pencil, X, Share2 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO,
@@ -143,6 +143,21 @@ function KalenderInner() {
   async function deleteEvent(id: string) {
     await fetch(`/api/events/${id}`, { method: "DELETE" });
     setEvents((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  const [shareTarget, setShareTarget] = useState<string | null>(null);
+
+  function shareVia(ev: Event, via: "gmail" | "outlook") {
+    const dateStr = format(parseISO(ev.date), "EEEE d MMMM yyyy", { locale: nl });
+    const subject = encodeURIComponent(`${ev.title} — ${dateStr}`);
+    const body = encodeURIComponent(
+      `📅 ${ev.title}\n📆 ${dateStr}${ev.time ? `\n⏰ ${ev.time}` : ""}\n👤 ${ev.person}`
+    );
+    const url = via === "gmail"
+      ? `https://mail.google.com/mail/?view=cm&su=${subject}&body=${body}`
+      : `https://outlook.live.com/mail/0/deeplink/compose?subject=${subject}&body=${body}`;
+    window.open(url, "_blank");
+    setShareTarget(null);
   }
 
   const startDay = startOfMonth(currentMonth).getDay();
@@ -370,6 +385,25 @@ function KalenderInner() {
                             {ev.time && <p className="text-xs opacity-70 flex items-center gap-1"><Clock size={10} />{ev.time}</p>}
                           </div>
                           <span className="text-xs opacity-70 shrink-0">{ev.person}</span>
+                          <div className="relative shrink-0">
+                            <button onClick={() => setShareTarget(shareTarget === ev.id ? null : ev.id)}
+                              className="opacity-60 hover:opacity-100 transition-opacity">
+                              <Share2 size={13} />
+                            </button>
+                            {shareTarget === ev.id && (
+                              <div className="absolute right-0 bottom-6 bg-cream border border-warm rounded-2xl shadow-xl overflow-hidden z-10 w-36">
+                                <button onClick={() => shareVia(ev, "gmail")}
+                                  className="flex items-center gap-2 w-full px-3 py-2.5 text-xs font-semibold text-brown hover:bg-warm transition-colors">
+                                  <span className="text-base">✉️</span> Gmail
+                                </button>
+                                <div className="h-px bg-warm" />
+                                <button onClick={() => shareVia(ev, "outlook")}
+                                  className="flex items-center gap-2 w-full px-3 py-2.5 text-xs font-semibold text-brown hover:bg-warm transition-colors">
+                                  <span className="text-base">📧</span> Outlook
+                                </button>
+                              </div>
+                            )}
+                          </div>
                           <button onClick={() => deleteEvent(ev.id)} className="shrink-0 opacity-60 hover:opacity-100"><Trash2 size={13} /></button>
                         </li>
                       );
