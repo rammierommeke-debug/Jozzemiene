@@ -78,6 +78,7 @@ export default function HomePage() {
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const userRef = useRef<"roel" | "emma" | null>(null);
   const dragFromIdx = useRef<number | null>(null);
   const dropIdxRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -105,6 +106,7 @@ export default function HomePage() {
   }, [user]);
 
   function chooseUser(u: "roel" | "emma") {
+    userRef.current = u;
     setUser(u);
   }
 
@@ -159,7 +161,7 @@ export default function HomePage() {
           const next = [...prev];
           const [moved] = next.splice(from, 1);
           next.splice(to, 0, moved);
-          const u = localStorage.getItem("home_user");
+          const u = userRef.current;
           if (u) localStorage.setItem(`home_widgets_v2_${u}`, JSON.stringify(next));
           return next;
         });
