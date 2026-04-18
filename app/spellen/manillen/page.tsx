@@ -7,7 +7,7 @@ import Link from "next/link";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Suit = "♠" | "♥" | "♦" | "♣";
-type Value = "6" | "7" | "8" | "9" | "Z" | "D" | "H" | "A" | "M";
+type Value = "7" | "8" | "9" | "Z" | "D" | "H" | "A" | "M";
 type Phase = "choosing_trump" | "playing" | "finished";
 
 interface Card { suit: Suit; value: Value; id: string }
@@ -43,16 +43,16 @@ interface GameState {
 
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
 const SUIT_LABEL: Record<Suit, string> = { "♠": "Schoppen", "♥": "Harten", "♦": "Ruiten", "♣": "Klaveren" };
-const VALUES: Value[] = ["6", "7", "8", "9", "Z", "D", "H", "A", "M"];
+const VALUES: Value[] = ["7", "8", "9", "Z", "D", "H", "A", "M"];
 
 const RANK: Record<Value, number> = {
-  "6": 0, "7": 1, "8": 2, "9": 3, "Z": 4, "D": 5, "H": 6, "A": 7, "M": 8,
+  "7": 0, "8": 1, "9": 2, "Z": 3, "D": 4, "H": 5, "A": 6, "M": 7,
 };
 const POINTS: Record<Value, number> = {
-  "6": 0, "7": 0, "8": 0, "9": 0, "Z": 1, "D": 2, "H": 3, "A": 4, "M": 5,
+  "7": 0, "8": 0, "9": 0, "Z": 1, "D": 2, "H": 3, "A": 4, "M": 5,
 };
 const VLABEL: Record<Value, string> = {
-  "6": "6", "7": "7", "8": "8", "9": "9", "Z": "Z", "D": "D", "H": "H", "A": "A", "M": "10",
+  "7": "7", "8": "8", "9": "9", "Z": "Z", "D": "D", "H": "H", "A": "A", "M": "10",
 };
 
 function makeCard(suit: Suit, value: Value): Card { return { suit, value, id: suit + value }; }
@@ -151,7 +151,7 @@ function newGame(firstPlayer: Player): GameState {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-const VALID_VALUES = new Set(["6","7","8","9","Z","D","H","A","M"]);
+const VALID_VALUES = new Set(["7","8","9","Z","D","H","A","M"]);
 function isValidGame(g: unknown): g is GameState {
   if (!g || typeof g !== "object") return false;
   const gs = g as GameState;
@@ -198,10 +198,7 @@ function CardFace({ card, selected, disabled, illegal, onClick, isTrump }: {
       <span className="text-xs leading-none font-bold">{VLABEL[card.value]}</span>
       <span className="text-xs leading-none">{card.suit}</span>
       <span className="absolute inset-0 flex items-center justify-center text-2xl opacity-10 pointer-events-none select-none">{card.suit}</span>
-      {POINTS[card.value] > 0 && (
-        <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold text-amber-500 leading-none">{POINTS[card.value]}</span>
-      )}
-      {isTrump && <span className="absolute top-0.5 right-1 text-[7px] text-amber-500 leading-none">★</span>}
+{isTrump && <span className="absolute top-0.5 right-1 text-[7px] text-amber-500 leading-none">★</span>}
     </button>
   );
 }
@@ -592,9 +589,7 @@ export default function ManillenPage() {
       <div className="bg-warm rounded-3xl p-3 flex items-center justify-center gap-8 min-h-[100px] border border-warm/60">
         {game.trick.length === 0 ? (
           <p className="text-sm text-brown-light text-center">
-            {game.trickWinner
-              ? `${PNAME[game.trickWinner]} won de slag`
-              : isMyTurn ? "Jouw beurt — kies een kaart" : `Wachten op ${PNAME[game.currentPlayer]}…`}
+            {isMyTurn ? "Jouw beurt — kies een kaart" : `Wachten op ${PNAME[game.currentPlayer]}…`}
           </p>
         ) : (
           ([opp, me] as Player[]).map(p => {
@@ -656,13 +651,6 @@ export default function ManillenPage() {
         )}
       </div>
 
-      {/* Log */}
-      <div className="bg-warm rounded-2xl p-3 max-h-28 overflow-y-auto">
-        <p className="text-[10px] font-semibold text-brown-light uppercase tracking-wide mb-1">Spelverloop</p>
-        {game.log.map((entry, i) => (
-          <p key={i} className={`text-xs leading-relaxed ${i === 0 ? "text-brown font-semibold" : "text-brown-light"}`}>{entry}</p>
-        ))}
-      </div>
 
     </div>
   );
