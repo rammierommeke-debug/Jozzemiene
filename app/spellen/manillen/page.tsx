@@ -213,31 +213,31 @@ function CardBack({ small }: { small?: boolean }) {
 }
 
 // Stapeltje: open kaart bovenop, optioneel een ruggetje dat eronder uitsteekt
-function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, isTrump }: {
+function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, trump }: {
   slot: Slot;
   canPlay: boolean;
   selected: boolean;
   illegal: boolean;
   onPlay: () => void;
-  showHidden: boolean; // true = eigenaar, ziet hidden kaart
-  isTrump?: boolean;
+  showHidden: boolean;
+  trump: Suit | null;
 }) {
   if (!slot.open && !slot.hidden) {
-    // Leeg stapeltje
     return <div className="w-14 h-20 rounded-xl border-2 border-dashed border-gray-200 opacity-30 shrink-0" />;
   }
+  const openIsTrump = !!trump && slot.open?.suit === trump;
+  // Hidden kaart mag nooit gehighlight worden zolang er een open kaart bovenop ligt
+  const hiddenIsTrump = !!trump && !slot.open && slot.hidden?.suit === trump;
   return (
     <div className="relative shrink-0" style={{ width: 56, height: showHidden && slot.hidden ? 88 : 80 }}>
-      {/* Hidden card peeking underneath — geen trump-highlight zolang open kaart er bovenop zit */}
       {slot.hidden && (
         <div className="absolute bottom-0 left-0">
           {showHidden
-            ? <CardFace card={slot.hidden} disabled isTrump={!slot.open && isTrump} />
+            ? <CardFace card={slot.hidden} disabled isTrump={hiddenIsTrump} />
             : <CardBack />
           }
         </div>
       )}
-      {/* Open card on top */}
       {slot.open && (
         <div className="absolute top-0 left-0">
           <CardFace
@@ -246,7 +246,7 @@ function SlotStack({ slot, canPlay, selected, illegal, onPlay, showHidden, isTru
             disabled={!canPlay || illegal}
             illegal={illegal}
             onClick={canPlay && !illegal ? onPlay : undefined}
-            isTrump={isTrump}
+            isTrump={openIsTrump}
           />
         </div>
       )}
@@ -498,7 +498,7 @@ export default function ManillenPage() {
           <div className="flex gap-3 flex-wrap">
             {mine.slots.map((slot, i) => (
               <SlotStack key={i} slot={slot} canPlay={false} selected={false} illegal={false}
-                onPlay={() => {}} showHidden isTrump={false} />
+                onPlay={() => {}} showHidden trump={null} />
             ))}
           </div>
           {mine.drawn.length > 0 && (
@@ -572,7 +572,7 @@ export default function ManillenPage() {
           {theirs.slots.map((slot, i) => (
             <SlotStack key={i} slot={slot} canPlay={false} selected={false} illegal={false}
               onPlay={() => {}} showHidden={false}
-              isTrump={game.trump ? (slot.open?.suit === game.trump) : false} />
+              trump={game.trump} />
           ))}
         </div>
         {/* Handkaarten tegenstander als ruggetjes */}
@@ -625,7 +625,7 @@ export default function ManillenPage() {
                 illegal={isIllegal}
                 onPlay={() => topCard && handleCardClick(topCard)}
                 showHidden
-                isTrump={game.trump ? slot.open?.suit === game.trump : false}
+                trump={game.trump}
               />
             );
           })}
