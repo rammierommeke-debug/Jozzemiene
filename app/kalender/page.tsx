@@ -90,6 +90,7 @@ function KalenderInner() {
   const [modalDay, setModalDay] = useState<Date | null>(null);
 
   useEffect(() => {
+    localStorage.setItem("kalender_seen_at", new Date().toISOString());
     fetch("/api/events").then((r) => r.json()).then(setEvents).finally(() => setLoading(false));
   }, []);
 

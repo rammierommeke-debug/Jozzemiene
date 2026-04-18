@@ -12,6 +12,22 @@ export default function Sidebar() {
   const { config, setPanelOpen } = useTheme();
   const navItems = config.navItems;
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasNewEvents, setHasNewEvents] = useState(false);
+
+  useEffect(() => {
+    async function checkNew() {
+      try {
+        const res = await fetch("/api/events");
+        const data: { created_at?: string }[] = await res.json();
+        const seen = localStorage.getItem("kalender_seen_at");
+        if (!seen) { setHasNewEvents(data.length > 0); return; }
+        setHasNewEvents(data.some(e => e.created_at && e.created_at > seen));
+      } catch {}
+    }
+    checkNew();
+    const id = setInterval(checkNew, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -97,7 +113,12 @@ export default function Sidebar() {
                     : "text-brown hover:bg-rose-light/40 hover:text-terracotta"
                 }`}
               >
-                <Icon size={18} className="shrink-0" />
+                <div className="relative shrink-0">
+                  <Icon size={18} />
+                  {href === "/kalender" && hasNewEvents && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose" />
+                  )}
+                </div>
                 <span className="font-body font-semibold text-sm">{label}</span>
               </Link>
             );
@@ -148,7 +169,12 @@ export default function Sidebar() {
                   active ? "text-terracotta" : "text-brown-light"
                 }`}
               >
-                <Icon size={20} className="shrink-0" />
+                <div className="relative">
+                  <Icon size={20} />
+                  {href === "/kalender" && hasNewEvents && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose" />
+                  )}
+                </div>
                 <span className="text-[9px] font-semibold leading-none whitespace-nowrap">{label.split(" ")[0]}</span>
               </Link>
             );
