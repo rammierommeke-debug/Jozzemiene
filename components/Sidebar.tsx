@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  if (pathname === "/login") return null;
   const { config, setPanelOpen } = useTheme();
   const navItems = config.navItems;
   const [isFullscreen, setIsFullscreen] = useState(false);

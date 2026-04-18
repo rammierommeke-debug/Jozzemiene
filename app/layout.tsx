@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import VervenPanel from "@/components/VervenPanel";
 import AskClaudeButton from "@/components/AskClaudeButton";
 import { ThemeProvider } from "@/lib/themeContext";
+import SessionProvider from "@/components/SessionProvider";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -35,14 +36,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfair.variable} ${lato.variable} ${caveat.variable}`}>
       <body className="bg-cream min-h-screen flex">
-        <ThemeProvider>
-          <Sidebar />
-          <VervenPanel />
-          <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen pb-24 md:pb-8">
-            {children}
-          </main>
-          <AskClaudeButton />
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider>
+            <Sidebar />
+            <VervenPanel />
+            <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen pb-24 md:pb-8">
+              {children}
+            </main>
+            <AskClaudeButton />
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

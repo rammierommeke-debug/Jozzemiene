@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { Heart, Sun, Calendar, Image, Plus, X, GripVertical, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -74,11 +75,12 @@ function weatherIcon(code: number) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [user, setUser] = useState<"roel" | "emma" | null>(null);
+  const { data: session } = useSession();
+  const user = (session?.user?.name as "roel" | "emma" | null) ?? null;
+  const userRef = useRef<"roel" | "emma" | null>(null);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const userRef = useRef<"roel" | "emma" | null>(null);
   const dragFromIdx = useRef<number | null>(null);
   const dropIdxRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -105,10 +107,7 @@ export default function HomePage() {
     }
   }, [user]);
 
-  function chooseUser(u: "roel" | "emma") {
-    userRef.current = u;
-    setUser(u);
-  }
+  useEffect(() => { userRef.current = user; }, [user]);
 
   function reset() {
     if (user) localStorage.removeItem(widgetKey(user));
@@ -230,23 +229,7 @@ export default function HomePage() {
     return rows;
   }
 
-  if (!user) return (
-    <div className="max-w-sm mx-auto pt-24 px-4 flex flex-col items-center gap-6">
-      <div className="text-center">
-        <p className="text-5xl mb-3">🏠</p>
-        <h1 className="font-display text-3xl text-brown mb-1">Jouw home</h1>
-        <p className="text-brown-light text-sm">Wie ben jij? Elke persoon heeft zijn eigen pagina.</p>
-      </div>
-      <div className="flex gap-4 w-full">
-        {(["emma", "roel"] as const).map(u => (
-          <button key={u} onClick={() => chooseUser(u)}
-            className={`flex-1 rounded-2xl py-5 font-display text-xl border-2 transition-all hover:scale-105 ${u === "emma" ? "bg-rose/10 border-rose/30 text-rose" : "bg-blue-50 border-blue-200 text-blue-500"}`}>
-            {u === "emma" ? "Emma" : "Roel"}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  if (!user) return null;
 
   return (
     <div className="max-w-3xl mx-auto pt-14 md:pt-0 pb-10">
@@ -262,9 +245,9 @@ export default function HomePage() {
       {/* Edit bar */}
       <div className="flex items-center justify-between mb-6">
         <div />
-        <button onClick={() => { localStorage.removeItem("home_user"); setUser(null); setEditMode(false); }}
-          className={`text-xs text-brown-light hover:text-terracotta transition-colors font-semibold ${user === "emma" ? "text-rose" : "text-blue-400"}`}>
-          {user === "emma" ? "Emma" : "Roel"} ↓
+        <button onClick={() => signOut({ callbackUrl: "/login" })}
+          className={`text-xs font-semibold transition-colors hover:text-terracotta ${user === "emma" ? "text-rose" : "text-blue-400"}`}>
+          {user === "emma" ? "Emma" : "Roel"} · Uitloggen
         </button>
         <div className="flex items-center gap-2">
           {editMode && (
