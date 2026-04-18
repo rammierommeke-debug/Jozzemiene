@@ -46,8 +46,11 @@ export default function FeedbackPage() {
     setIssues(prev => prev.filter(i => i.id !== id));
   }
 
-  const issueUrl = (t: string) =>
-    `https://github.com/rammierommeke-debug/Jozzemiene/issues/new?body=${encodeURIComponent(`@claude ${t}`)}`;
+  function issueUrl(t: string) {
+    const firstLine = t.split(/[\n.!?]/)[0].trim().slice(0, 60);
+    const title = firstLine || "Website verbetering";
+    return `https://github.com/rammierommeke-debug/Jozzemiene/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(`@claude ${t}`)}`;
+  }
 
   return (
     <div className="max-w-lg mx-auto pt-14 md:pt-0 px-4 pb-8">
