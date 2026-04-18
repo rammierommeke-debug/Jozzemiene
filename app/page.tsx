@@ -11,7 +11,7 @@ import { nl } from "date-fns/locale";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type WidgetType = "greeting" | "weather" | "notes" | "quicklinks" | "upcoming" | "photo-carousel" | "diary" | "quote";
+type WidgetType = "greeting" | "weather" | "notes" | "quicklinks" | "upcoming" | "photo-carousel" | "diary" | "quote" | "spotify";
 type WidgetWidth = "full" | "half";
 
 interface WidgetConfig {
@@ -40,6 +40,7 @@ const WIDGET_META: Record<WidgetType, { label: string; emoji: string; desc: stri
   "photo-carousel": { label: "Foto carrousel",    emoji: "🖼️", desc: "Foto's uit een album in een carrousel" },
   "diary":          { label: "Dagboek",           emoji: "📖", desc: "Privé dagboekje voor jezelf" },
   "quote":          { label: "Quote",             emoji: "💬", desc: "Een citaat of mooie tekst" },
+  "spotify":        { label: "Spotify",           emoji: "🎵", desc: "Huidig afspelend nummer (enkel Roel)" },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -316,6 +317,7 @@ function WidgetContent({ widget, editMode, onUpdate }: { widget: WidgetConfig; e
     case "photo-carousel": return <PhotoCarouselWidget albumId={widget.albumId} onUpdate={onUpdate} />;
     case "diary":          return <DiaryWidget widgetId={widget.id} />;
     case "quote":          return <QuoteWidget initial={{ text: widget.quoteText ?? "", author: widget.quoteAuthor ?? "" }} onUpdate={onUpdate} />;
+    case "spotify":        return <SpotifyWidget />;
     default:               return null;
   }
 }
@@ -659,5 +661,82 @@ function QuoteWidget({ initial, onUpdate }: { initial: { text: string; author: s
       {author && <p className="text-sm text-brown-light mt-2 text-right">{author}</p>}
       <p className="text-[10px] text-brown-light/50 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Klik om te bewerken</p>
     </div>
+  );
+}
+
+// ── Spotify Now Playing ───────────────────────────────────────────────────────
+
+type SpotifyData = {
+  playing: boolean;
+  title?: string;
+  artist?: string;
+  album?: string;
+  image?: string | null;
+  progress?: number;
+  duration?: number;
+  url?: string;
+};
+
+function SpotifyWidget() {
+  const [data, setData] = useState<SpotifyData | null>(null);
+  const [connected, setConnected] = useState(true);
+
+  useEffect(() => {
+    async function poll() {
+      const res = await fetch("/api/spotify/now-playing");
+      if (res.status === 404) { setConnected(false); return; }
+      if (!res.ok) return;
+      const json = await res.json();
+      setConnected(true);
+      setData(json);
+    }
+    poll();
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!connected) return (
+    <div className="p-5 flex flex-col items-center gap-3 text-center">
+      <p className="text-3xl">🎵</p>
+      <p className="text-sm font-semibold text-brown">Spotify niet gekoppeld</p>
+      <a href="/api/spotify/login"
+        className="px-4 py-2 rounded-full bg-[#1DB954] text-white text-xs font-bold hover:bg-[#1aa34a] transition-colors">
+        Verbinden met Spotify
+      </a>
+    </div>
+  );
+
+  if (!data || !data.playing) return (
+    <div className="p-5 flex items-center gap-3">
+      <div className="w-12 h-12 rounded-xl bg-warm flex items-center justify-center text-2xl shrink-0">🎵</div>
+      <div>
+        <p className="text-xs font-semibold text-brown-light uppercase tracking-wide">Spotify</p>
+        <p className="text-sm text-brown-light italic">Niets aan het spelen</p>
+      </div>
+    </div>
+  );
+
+  const pct = data.progress && data.duration ? (data.progress / data.duration) * 100 : 0;
+
+  return (
+    <a href={data.url} target="_blank" rel="noopener noreferrer" className="block p-4 hover:bg-black/[0.02] transition-colors rounded-3xl">
+      <div className="flex items-center gap-3">
+        {data.image
+          ? <NextImage src={data.image} alt={data.album ?? ""} width={56} height={56} className="w-14 h-14 rounded-xl object-cover shadow-sm shrink-0" />
+          : <div className="w-14 h-14 rounded-xl bg-warm flex items-center justify-center text-2xl shrink-0">🎵</div>
+        }
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-pulse shrink-0" />
+            <p className="text-[10px] font-bold text-[#1DB954] uppercase tracking-wide">Nu aan het spelen</p>
+          </div>
+          <p className="font-semibold text-brown text-sm truncate">{data.title}</p>
+          <p className="text-xs text-brown-light truncate">{data.artist}</p>
+        </div>
+      </div>
+      <div className="mt-3 h-1 bg-warm rounded-full overflow-hidden">
+        <div className="h-full bg-[#1DB954] rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
+      </div>
+    </a>
   );
 }
