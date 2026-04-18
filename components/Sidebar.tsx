@@ -82,7 +82,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-warm border-r border-warm flex-col shadow-sm">
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-warm border-r border-[#e2cdb5] flex-col shadow-md">
         <div className="p-6 border-b border-warm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 mb-1">

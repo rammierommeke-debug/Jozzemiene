@@ -11,6 +11,7 @@
   --color-rose-light: #e8b4b8;
   --color-brown: #6b4c3b;
   --color-brown-light: #9a7060;
+  --color-border: #e2cdb5;
 
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Lato", system-ui, sans-serif;
@@ -64,4 +65,15 @@
   .border-terracotta { border-color: var(--color-terracotta); }
   .border-sage { border-color: var(--color-sage); }
   .border-warm { border-color: var(--color-warm); }
+  .border-border { border-color: var(--color-border); }
+
+  .widget-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 1.5rem;
+    box-shadow:
+      0 1px 3px rgba(107, 76, 59, 0.06),
+      0 4px 12px rgba(107, 76, 59, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
 }

@@ -278,7 +278,7 @@ function WidgetShell({ widget, editMode, isSelected, hasSelection, onClick, onRe
     : "";
 
   return (
-    <div className={`relative rounded-3xl transition-all duration-150 ${ringClass}`}
+    <div className={`widget-card relative transition-all duration-150 ${ringClass}`}
       onClick={editMode ? onClick : undefined}
     >
       {/* Edit controls */}
@@ -328,7 +328,7 @@ function GreetingWidget() {
   const greeting = hour < 6 ? "Goeienacht" : hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
   const dateStr = now.toLocaleDateString("nl-NL", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return (
-    <div className="px-1 py-2">
+    <div className="px-5 py-4">
       <div className="flex items-center gap-3 mb-1">
         <Sun className="text-terracotta" size={28} />
         <h1 className="font-display text-4xl text-brown">{greeting}</h1>
@@ -355,7 +355,7 @@ function WeatherWidget() {
   }, []);
   if (!weather.length) return null;
   return (
-    <div className="bg-warm rounded-3xl border border-warm/80 overflow-hidden">
+    <div className="overflow-hidden rounded-3xl">
       <p className="text-xs font-semibold text-brown-light uppercase tracking-wide px-4 pt-3 pb-1">Ruiselede — deze week</p>
       <div className="grid grid-cols-7 divide-x divide-warm/60">
         {weather.map((day, i) => {
@@ -379,7 +379,7 @@ function WeatherWidget() {
 
 function QuickLinksWidget() {
   return (
-    <div className="bg-cream rounded-3xl border border-warm p-4">
+    <div className="p-4">
       <p className="text-xs font-semibold text-brown-light uppercase tracking-wide mb-3">Snelkoppelingen</p>
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {QUICK_LINKS.map(l => (
@@ -409,7 +409,7 @@ function UpcomingWidget() {
     }).catch(() => {});
   }, []);
   return (
-    <div className="bg-sage-light/30 rounded-3xl border border-warm p-4 h-full">
+    <div className="p-4 h-full">
       <div className="flex items-center gap-2 mb-3">
         <Calendar size={16} className="text-sage" />
         <p className="text-xs font-semibold text-brown-light uppercase tracking-wide">Komende afspraken</p>
@@ -458,7 +458,7 @@ function NotesWidget() {
   }
   const colorStyle = NOTE_COLORS.find(c => c.value === newColor) ?? NOTE_COLORS[0];
   return (
-    <div className="bg-cream rounded-3xl border border-warm p-4 h-full">
+    <div className="p-4 h-full">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-brown-light uppercase tracking-wide">📝 Niet vergeten</p>
         <button onClick={() => setAdding(!adding)} className="w-6 h-6 rounded-full bg-warm flex items-center justify-center text-brown-light hover:text-terracotta transition-colors">
@@ -525,7 +525,7 @@ function PhotoCarouselWidget({ albumId, onUpdate }: { albumId?: string; onUpdate
   }, [chosenAlbum]);
 
   if (picking) return (
-    <div className="bg-warm rounded-3xl border border-warm p-5">
+    <div className="p-5">
       <div className="flex items-center gap-2 mb-3"><Image size={16} className="text-rose" /><p className="text-sm font-semibold text-brown">Kies een album</p></div>
       <div className="flex flex-wrap gap-2">
         {albums.map(a => (
@@ -540,14 +540,14 @@ function PhotoCarouselWidget({ albumId, onUpdate }: { albumId?: string; onUpdate
   );
 
   if (!photos.length) return (
-    <div className="bg-warm rounded-3xl border border-warm p-5 flex items-center justify-center h-40">
+    <div className="p-5 flex items-center justify-center h-40">
       <p className="text-sm text-brown-light italic">Geen foto's in dit album</p>
     </div>
   );
 
   const photo = photos[idx];
   return (
-    <div className="bg-cream rounded-3xl border border-warm overflow-hidden">
+    <div className="overflow-hidden rounded-3xl">
       <div className="relative">
         <NextImage src={photo.url} alt={photo.caption || ""} width={800} height={400}
           className="w-full h-56 object-cover" />
@@ -599,7 +599,7 @@ function DiaryWidget({ widgetId }: { widgetId: string }) {
   }
 
   return (
-    <div className="bg-rose-light/20 rounded-3xl border border-rose-light/40 p-4">
+    <div className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2"><BookOpen size={15} className="text-rose" /><p className="text-xs font-semibold text-brown-light uppercase tracking-wide">Dagboek</p></div>
         <button onClick={() => setAdding(!adding)} className="w-6 h-6 rounded-full bg-rose/20 flex items-center justify-center text-rose hover:bg-rose/30 transition-colors"><Plus size={13} /></button>
@@ -642,7 +642,7 @@ function QuoteWidget({ initial, onUpdate }: { initial: { text: string; author: s
   }
 
   if (editing) return (
-    <div className="bg-warm rounded-3xl border border-warm p-5">
+    <div className="p-5">
       <div className="flex items-center gap-2 mb-3"><Quote size={15} className="text-brown-light" /><p className="text-xs font-semibold text-brown-light uppercase tracking-wide">Quote bewerken</p></div>
       <textarea value={text} onChange={e => setText(e.target.value)} rows={3} placeholder="Citaat of tekst..."
         className="w-full bg-cream rounded-xl border border-warm px-3 py-2 text-sm text-brown focus:outline-none focus:border-sage font-handwriting text-lg resize-none mb-2" />
@@ -653,7 +653,7 @@ function QuoteWidget({ initial, onUpdate }: { initial: { text: string; author: s
   );
 
   return (
-    <div onClick={() => setEditing(true)} className="bg-terracotta/10 border border-terracotta/20 rounded-3xl p-6 cursor-pointer hover:bg-terracotta/15 transition-colors group">
+    <div onClick={() => setEditing(true)} className="p-6 cursor-pointer hover:bg-terracotta/5 transition-colors group rounded-3xl">
       <Quote size={20} className="text-terracotta/50 mb-2" />
       <p className="font-handwriting text-2xl text-brown leading-relaxed">{text}</p>
       {author && <p className="text-sm text-brown-light mt-2 text-right">{author}</p>}
