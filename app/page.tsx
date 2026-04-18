@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { Heart, Sun, Calendar, Image, Plus, X, GripVertical, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
+import { Heart, Sun, Calendar, Image, Plus, X, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
@@ -82,12 +82,7 @@ export default function HomePage() {
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const dragFromIdx = useRef<number | null>(null);
-  const dropIdxRef = useRef<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [ghost, setGhost] = useState<{ x: number; y: number; label: string } | null>(null);
-  const [dropHighlight, setDropHighlight] = useState<number | null>(null);
-  const [crashed, setCrashed] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
   const widgetKey = (u: string) => `home_widgets_v2_${u}`;
 
@@ -113,8 +108,9 @@ export default function HomePage() {
 
   function reset() {
     if (user) localStorage.removeItem(widgetKey(user));
+    widgetsRef.current = DEFAULT_WIDGETS;
     setWidgets(DEFAULT_WIDGETS);
-    setCrashed(false);
+    setSelectedIdx(null);
   }
 
   function save(next: WidgetConfig[]) {
@@ -136,67 +132,19 @@ export default function HomePage() {
     setShowPicker(false);
   }
 
-  // ── Unified grip-based DnD (mouse + touch via native listeners) ──────────
-  function startDrag(idx: number, x: number, y: number) {
-    dragFromIdx.current = idx;
-    dropIdxRef.current = null;
-    setIsDragging(true);
-    const w = widgetsRef.current[idx];
-    if (!w) return;
-    setGhost({ x, y, label: WIDGET_META[w.type].emoji + " " + WIDGET_META[w.type].label });
+  function handleWidgetClick(idx: number) {
+    if (!editMode) return;
+    if (selectedIdx === null) {
+      setSelectedIdx(idx);
+    } else if (selectedIdx === idx) {
+      setSelectedIdx(null);
+    } else {
+      const next = [...widgets];
+      [next[selectedIdx], next[idx]] = [next[idx], next[selectedIdx]];
+      save(next);
+      setSelectedIdx(null);
+    }
   }
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    function move(x: number, y: number) {
-      setGhost(prev => prev ? { ...prev, x, y } : null);
-      const hit = document.elementFromPoint(x, y);
-      const el = hit?.closest("[data-widget-idx]") as HTMLElement | null;
-      const raw = el?.dataset.widgetIdx;
-      const idx = raw !== undefined ? Number(raw) : null;
-      dropIdxRef.current = idx;
-      setDropHighlight(idx);
-    }
-
-    function end() {
-      const from = dragFromIdx.current;
-      const to = dropIdxRef.current;
-      if (from !== null && to !== null && from !== to) {
-        const next = [...widgetsRef.current];
-        // swap: wissel de twee posities
-        [next[from], next[to]] = [next[to], next[from]];
-        widgetsRef.current = next;
-        setWidgets(next);
-        const u = userRef.current;
-        if (u) localStorage.setItem(`home_widgets_v2_${u}`, JSON.stringify(next));
-      }
-      dragFromIdx.current = null;
-      dropIdxRef.current = null;
-      setIsDragging(false);
-      setGhost(null);
-      setDropHighlight(null);
-    }
-
-    function onMouseMove(e: MouseEvent) { move(e.clientX, e.clientY); }
-    function onMouseUp() { end(); }
-    function onTouchMove(e: TouchEvent) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); }
-    function onTouchEnd() { end(); }
-    function onTouchCancel() { end(); }
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
-    document.addEventListener("touchend", onTouchEnd);
-    document.addEventListener("touchcancel", onTouchCancel);
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
-      document.removeEventListener("touchcancel", onTouchCancel);
-    };
-  }, [isDragging]);
 
   // ── Layout grouping (pair consecutive halves) ─────────────────────────────
   function renderRows() {
@@ -205,33 +153,32 @@ export default function HomePage() {
     while (i < widgets.length) {
       const w = widgets[i];
       if (w.width === "half" && i + 1 < widgets.length && widgets[i + 1].width === "half") {
-        const rowStart = i; // capture by value
+        const a = i, b = i + 1;
         rows.push(
-          <div key={`row-${rowStart}`} className="grid grid-cols-2 gap-4">
-            {[widgets[rowStart], widgets[rowStart + 1]].map((ww, offset) => {
-              const idx = rowStart + offset; // capture by value
-              return (
-                <WidgetShell key={ww.id} widget={ww} idx={idx} editMode={editMode}
-                  isDragOver={dropHighlight === idx}
-                  onRemove={() => removeWidget(ww.id)}
-                  onToggleWidth={() => toggleWidth(ww.id)}
-                  onUpdate={patch => updateWidget(ww.id, patch)}
-                  onGripDown={(x, y) => startDrag(idx, x, y)}
-                />
-              );
-            })}
+          <div key={`row-${a}`} className="grid grid-cols-2 gap-4">
+            {([a, b] as const).map(idx => (
+              <WidgetShell key={widgets[idx].id} widget={widgets[idx]} editMode={editMode}
+                isSelected={selectedIdx === idx}
+                hasSelection={selectedIdx !== null}
+                onClick={() => handleWidgetClick(idx)}
+                onRemove={() => removeWidget(widgets[idx].id)}
+                onToggleWidth={() => toggleWidth(widgets[idx].id)}
+                onUpdate={patch => updateWidget(widgets[idx].id, patch)}
+              />
+            ))}
           </div>
         );
         i += 2;
       } else {
-        const idx = i; // capture by value
+        const idx = i;
         rows.push(
-          <WidgetShell key={w.id} widget={w} idx={idx} editMode={editMode}
-            isDragOver={dropHighlight === idx}
+          <WidgetShell key={w.id} widget={w} editMode={editMode}
+            isSelected={selectedIdx === idx}
+            hasSelection={selectedIdx !== null}
+            onClick={() => handleWidgetClick(idx)}
             onRemove={() => removeWidget(w.id)}
             onToggleWidth={() => toggleWidth(w.id)}
             onUpdate={patch => updateWidget(w.id, patch)}
-            onGripDown={(x, y) => startDrag(idx, x, y)}
           />
         );
         i += 1;
@@ -251,16 +198,18 @@ export default function HomePage() {
   return (
     <div className="max-w-3xl mx-auto pt-14 md:pt-0 pb-10">
 
-      {/* Drag ghost */}
-      {ghost && (
-        <div className="fixed z-[999] pointer-events-none bg-cream border-2 border-terracotta rounded-2xl px-4 py-2 shadow-2xl text-sm font-semibold text-brown opacity-90"
-          style={{ left: ghost.x - 60, top: ghost.y - 24 }}>
-          {ghost.label}
-        </div>
-      )}
-
       {/* Edit bar */}
-      <div className="flex items-center justify-end mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          {editMode && selectedIdx !== null && (
+            <p className="text-xs text-terracotta font-semibold animate-pulse">
+              ✦ {WIDGET_META[widgets[selectedIdx].type].label} geselecteerd — klik een andere widget om te swappen
+            </p>
+          )}
+          {editMode && selectedIdx === null && (
+            <p className="text-xs text-brown-light">Klik een widget om hem te verplaatsen</p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {editMode && (
             <button onClick={reset}
@@ -274,7 +223,7 @@ export default function HomePage() {
               <Plus size={13} /> Widget toevoegen
             </button>
           )}
-          <button onClick={() => setEditMode(!editMode)}
+          <button onClick={() => { setEditMode(!editMode); setSelectedIdx(null); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${editMode ? "bg-terracotta text-cream border-terracotta" : "bg-cream text-brown-light border-warm hover:border-brown-light"}`}>
             {editMode ? <><Check size={13} /> Klaar</> : <><Settings size={13} /> Aanpassen</>}
           </button>
@@ -283,19 +232,7 @@ export default function HomePage() {
 
       {/* Widget rows */}
       <div className="flex flex-col gap-4">
-        {crashed
-          ? (
-            <div className="text-center py-16">
-              <p className="text-4xl mb-4">😵</p>
-              <p className="font-display text-xl text-brown mb-2">Er ging iets mis</p>
-              <p className="text-sm text-brown-light mb-6">De widget-layout is hersteld naar de standaard.</p>
-              <button onClick={reset} className="bg-terracotta text-cream rounded-2xl px-6 py-2.5 font-semibold hover:bg-terracotta/80 transition-colors">
-                Herstellen
-              </button>
-            </div>
-          )
-          : renderRows()
-        }
+        {renderRows()}
       </div>
 
       {/* Widget picker modal */}
@@ -327,18 +264,26 @@ export default function HomePage() {
 
 // ── Widget Shell (drag wrapper + edit controls) ───────────────────────────────
 
-function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidth, onUpdate, onGripDown }: {
-  widget: WidgetConfig; idx: number; editMode: boolean; isDragOver: boolean;
-  onRemove: () => void; onToggleWidth: () => void; onUpdate: (patch: Partial<WidgetConfig>) => void;
-  onGripDown: (x: number, y: number) => void;
+function WidgetShell({ widget, editMode, isSelected, hasSelection, onClick, onRemove, onToggleWidth, onUpdate }: {
+  widget: WidgetConfig; editMode: boolean; isSelected: boolean; hasSelection: boolean;
+  onClick: () => void; onRemove: () => void; onToggleWidth: () => void;
+  onUpdate: (patch: Partial<WidgetConfig>) => void;
 }) {
+  const ringClass = isSelected
+    ? "ring-2 ring-terracotta shadow-lg scale-[1.01]"
+    : editMode && hasSelection
+    ? "ring-2 ring-dashed ring-terracotta/40 hover:ring-terracotta hover:scale-[1.01] cursor-pointer"
+    : editMode
+    ? "ring-2 ring-dashed ring-brown-light/30 hover:ring-terracotta/50 cursor-pointer"
+    : "";
+
   return (
-    <div data-widget-idx={idx}
-      className={`relative rounded-3xl transition-all duration-150 ${isDragOver ? "ring-2 ring-terracotta scale-[1.01]" : ""} ${editMode ? "ring-2 ring-dashed ring-brown-light/30" : ""}`}
+    <div className={`relative rounded-3xl transition-all duration-150 ${ringClass}`}
+      onClick={editMode ? onClick : undefined}
     >
-      {/* Edit overlay controls */}
+      {/* Edit controls */}
       {editMode && (
-        <div className="absolute top-2 right-2 z-20 flex gap-1.5">
+        <div className="absolute top-2 right-2 z-20 flex gap-1.5" onClick={e => e.stopPropagation()}>
           <button onClick={onToggleWidth} title={widget.width === "full" ? "Half breedte" : "Volle breedte"}
             className="w-7 h-7 bg-cream border border-warm rounded-lg flex items-center justify-center text-brown-light hover:text-terracotta transition-colors shadow-sm">
             {widget.width === "full" ? <Columns size={13} /> : <AlignJustify size={13} />}
@@ -349,15 +294,9 @@ function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidt
           </button>
         </div>
       )}
-      {editMode && (
-        <div className="absolute top-2 left-2 z-20">
-          <div
-            className="w-7 h-7 bg-cream border border-warm rounded-lg flex items-center justify-center text-brown-light shadow-sm cursor-grab active:cursor-grabbing select-none touch-none"
-            onMouseDown={e => { e.preventDefault(); onGripDown(e.clientX, e.clientY); }}
-            onTouchStart={e => { e.preventDefault(); onGripDown(e.touches[0].clientX, e.touches[0].clientY); }}
-          >
-            <GripVertical size={13} />
-          </div>
+      {editMode && isSelected && (
+        <div className="absolute top-2 left-2 z-20 bg-terracotta text-cream rounded-lg px-2 py-1 text-[10px] font-bold shadow-sm">
+          ✦ geselecteerd
         </div>
       )}
       <WidgetContent widget={widget} editMode={editMode} onUpdate={onUpdate} />
