@@ -53,13 +53,20 @@ export default function Sidebar() {
               <Heart className="text-rose fill-rose" size={20} />
               <span className="font-handwriting text-2xl text-brown">Jozzemiene</span>
             </div>
-            <button
-              onClick={() => setPanelOpen(true)}
-              className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta hover:bg-terracotta/10 transition-colors"
-              title="Verven"
-            >
-              <Paintbrush size={15} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <Link href="/feedback"
+                className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta hover:bg-terracotta/10 transition-colors font-bold text-sm"
+                title="Feedback">
+                !
+              </Link>
+              <button
+                onClick={() => setPanelOpen(true)}
+                className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta hover:bg-terracotta/10 transition-colors"
+                title="Verven"
+              >
+                <Paintbrush size={15} />
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 ml-7">
             <BookMarked size={11} className="text-brown-light" />
@@ -147,6 +154,11 @@ export default function Sidebar() {
             className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors">
             {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
           </button>
+          <Link href="/feedback"
+            className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors font-bold text-sm"
+            title="Feedback">
+            !
+          </Link>
           <button onClick={() => setPanelOpen(true)}
             className="w-8 h-8 rounded-xl bg-cream flex items-center justify-center text-brown-light hover:text-terracotta transition-colors"
             title="Verven">
