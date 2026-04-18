@@ -74,14 +74,15 @@ function weatherIcon(code: number) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [user, setUser] = useState<"roel" | "emma" | null>(null);
+  const [user, setUser] = useState<"roel" | "emma" | null | "loading">("loading");
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const touchDragIdx = useRef<number | null>(null);
-  const [touchGhost, setTouchGhost] = useState<{ x: number; y: number; label: string } | null>(null);
+  const dragFromIdx = useRef<number | null>(null);
+  const dropIdxRef = useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [ghost, setGhost] = useState<{ x: number; y: number; label: string } | null>(null);
+  const [dropHighlight, setDropHighlight] = useState<number | null>(null);
   const [crashed, setCrashed] = useState(false);
 
   const widgetKey = (u: string) => `home_widgets_v2_${u}`;
@@ -110,6 +111,8 @@ export default function HomePage() {
     setUser(u);
   }
 
+  if (user === "loading") return null;
+
   function reset() {
     if (user) localStorage.removeItem(widgetKey(user));
     setWidgets(DEFAULT_WIDGETS);
@@ -134,48 +137,64 @@ export default function HomePage() {
     setShowPicker(false);
   }
 
-  // ── Desktop DnD ───────────────────────────────────────────────────────────
-  function onDragStart(i: number) { setDragIdx(i); }
-  function onDragOver(e: React.DragEvent, i: number) { e.preventDefault(); setDragOverIdx(i); }
-  function onDrop(i: number) {
-    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setDragOverIdx(null); return; }
-    const next = [...widgets];
-    const [moved] = next.splice(dragIdx, 1);
-    next.splice(i, 0, moved);
-    save(next);
-    setDragIdx(null); setDragOverIdx(null);
+  // ── Unified grip-based DnD (mouse + touch via native listeners) ──────────
+  function startDrag(idx: number, x: number, y: number) {
+    dragFromIdx.current = idx;
+    dropIdxRef.current = null;
+    setIsDragging(true);
+    setGhost({ x, y, label: WIDGET_META[widgets[idx].type].emoji + " " + WIDGET_META[widgets[idx].type].label });
   }
 
-  // ── Touch DnD ─────────────────────────────────────────────────────────────
-  const onTouchStartW = useCallback((i: number, e: React.TouchEvent) => {
-    touchDragIdx.current = i;
-    const t = e.touches[0];
-    setTouchGhost({ x: t.clientX, y: t.clientY, label: WIDGET_META[widgets[i].type].emoji + " " + WIDGET_META[widgets[i].type].label });
-  }, [widgets]);
+  useEffect(() => {
+    if (!isDragging) return;
 
-  const onTouchMoveW = useCallback((e: React.TouchEvent) => {
-    if (touchDragIdx.current === null) return;
-    e.preventDefault();
-    const t = e.touches[0];
-    setTouchGhost(prev => prev ? { ...prev, x: t.clientX, y: t.clientY } : null);
-    const el = document.elementFromPoint(t.clientX, t.clientY)?.closest("[data-widget-idx]") as HTMLElement | null;
-    setDragOverIdx(el ? Number(el.dataset.widgetIdx) : null);
-  }, []);
-
-  const onTouchEndW = useCallback(() => {
-    if (touchDragIdx.current !== null && dragOverIdx !== null && touchDragIdx.current !== dragOverIdx) {
-      setWidgets(prev => {
-        const next = [...prev];
-        const [moved] = next.splice(touchDragIdx.current!, 1);
-        next.splice(dragOverIdx, 0, moved);
-        if (user) localStorage.setItem(widgetKey(user), JSON.stringify(next));
-        return next;
-      });
+    function move(x: number, y: number) {
+      setGhost(prev => prev ? { ...prev, x, y } : null);
+      const el = document.elementFromPoint(x, y)?.closest("[data-widget-idx]") as HTMLElement | null;
+      const idx = el ? Number(el.dataset.widgetIdx) : null;
+      dropIdxRef.current = idx;
+      setDropHighlight(idx);
     }
-    touchDragIdx.current = null;
-    setTouchGhost(null);
-    setDragOverIdx(null);
-  }, [dragOverIdx, user]);
+
+    function end() {
+      const from = dragFromIdx.current;
+      const to = dropIdxRef.current;
+      if (from !== null && to !== null && from !== to) {
+        setWidgets(prev => {
+          const next = [...prev];
+          const [moved] = next.splice(from, 1);
+          next.splice(to, 0, moved);
+          const u = localStorage.getItem("home_user");
+          if (u) localStorage.setItem(`home_widgets_v2_${u}`, JSON.stringify(next));
+          return next;
+        });
+      }
+      dragFromIdx.current = null;
+      dropIdxRef.current = null;
+      setIsDragging(false);
+      setGhost(null);
+      setDropHighlight(null);
+    }
+
+    function onMouseMove(e: MouseEvent) { move(e.clientX, e.clientY); }
+    function onMouseUp() { end(); }
+    function onTouchMove(e: TouchEvent) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); }
+    function onTouchEnd() { end(); }
+    function onTouchCancel() { end(); }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchcancel", onTouchCancel);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchCancel);
+    };
+  }, [isDragging]);
 
   // ── Layout grouping (pair consecutive halves) ─────────────────────────────
   function renderRows() {
@@ -183,22 +202,16 @@ export default function HomePage() {
     let i = 0;
     while (i < widgets.length) {
       const w = widgets[i];
-      const isDragOver = dragOverIdx === i;
       if (w.width === "half" && i + 1 < widgets.length && widgets[i + 1].width === "half") {
         rows.push(
           <div key={`row-${i}`} className="grid grid-cols-2 gap-4">
             {[widgets[i], widgets[i + 1]].map((ww, offset) => (
               <WidgetShell key={ww.id} widget={ww} idx={i + offset} editMode={editMode}
-                isDragOver={dragOverIdx === i + offset}
+                isDragOver={dropHighlight === i + offset}
                 onRemove={() => removeWidget(ww.id)}
                 onToggleWidth={() => toggleWidth(ww.id)}
                 onUpdate={patch => updateWidget(ww.id, patch)}
-                onDragStart={() => onDragStart(i + offset)}
-                onDragOver={e => onDragOver(e, i + offset)}
-                onDrop={() => onDrop(i + offset)}
-                onTouchStart={e => onTouchStartW(i + offset, e)}
-                onTouchMove={onTouchMoveW}
-                onTouchEnd={onTouchEndW}
+                onGripDown={(x, y) => startDrag(i + offset, x, y)}
               />
             ))}
           </div>
@@ -207,16 +220,11 @@ export default function HomePage() {
       } else {
         rows.push(
           <WidgetShell key={w.id} widget={w} idx={i} editMode={editMode}
-            isDragOver={isDragOver}
+            isDragOver={dropHighlight === i}
             onRemove={() => removeWidget(w.id)}
             onToggleWidth={() => toggleWidth(w.id)}
             onUpdate={patch => updateWidget(w.id, patch)}
-            onDragStart={() => onDragStart(i)}
-            onDragOver={e => onDragOver(e, i)}
-            onDrop={() => onDrop(i)}
-            onTouchStart={e => onTouchStartW(i, e)}
-            onTouchMove={onTouchMoveW}
-            onTouchEnd={onTouchEndW}
+            onGripDown={(x, y) => startDrag(i, x, y)}
           />
         );
         i += 1;
@@ -246,11 +254,11 @@ export default function HomePage() {
   return (
     <div className="max-w-3xl mx-auto pt-14 md:pt-0 pb-10">
 
-      {/* Touch ghost */}
-      {touchGhost && (
+      {/* Drag ghost */}
+      {ghost && (
         <div className="fixed z-[999] pointer-events-none bg-cream border-2 border-terracotta rounded-2xl px-4 py-2 shadow-2xl text-sm font-semibold text-brown opacity-90"
-          style={{ left: touchGhost.x - 60, top: touchGhost.y - 24 }}>
-          {touchGhost.label}
+          style={{ left: ghost.x - 60, top: ghost.y - 24 }}>
+          {ghost.label}
         </div>
       )}
 
@@ -327,24 +335,14 @@ export default function HomePage() {
 
 // ── Widget Shell (drag wrapper + edit controls) ───────────────────────────────
 
-function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidth, onUpdate, onDragStart, onDragOver, onDrop, onTouchStart, onTouchMove, onTouchEnd }: {
+function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidth, onUpdate, onGripDown }: {
   widget: WidgetConfig; idx: number; editMode: boolean; isDragOver: boolean;
   onRemove: () => void; onToggleWidth: () => void; onUpdate: (patch: Partial<WidgetConfig>) => void;
-  onDragStart: () => void; onDragOver: (e: React.DragEvent) => void; onDrop: () => void;
-  onTouchStart: (e: React.TouchEvent) => void; onTouchMove: (e: React.TouchEvent) => void; onTouchEnd: () => void;
+  onGripDown: (x: number, y: number) => void;
 }) {
   return (
     <div data-widget-idx={idx}
       className={`relative rounded-3xl transition-all duration-150 ${isDragOver ? "ring-2 ring-terracotta scale-[1.01]" : ""} ${editMode ? "ring-2 ring-dashed ring-brown-light/30" : ""}`}
-      style={editMode ? { touchAction: "none" } : undefined}
-      draggable={editMode}
-      onDragStart={editMode ? onDragStart : undefined}
-      onDragOver={editMode ? onDragOver : undefined}
-      onDragLeave={editMode ? () => {} : undefined}
-      onDrop={editMode ? onDrop : undefined}
-      onTouchStart={editMode ? onTouchStart : undefined}
-      onTouchMove={editMode ? onTouchMove : undefined}
-      onTouchEnd={editMode ? onTouchEnd : undefined}
     >
       {/* Edit overlay controls */}
       {editMode && (
@@ -361,7 +359,11 @@ function WidgetShell({ widget, idx, editMode, isDragOver, onRemove, onToggleWidt
       )}
       {editMode && (
         <div className="absolute top-2 left-2 z-20">
-          <div className="w-7 h-7 bg-cream border border-warm rounded-lg flex items-center justify-center text-brown-light shadow-sm cursor-grab">
+          <div
+            className="w-7 h-7 bg-cream border border-warm rounded-lg flex items-center justify-center text-brown-light shadow-sm cursor-grab active:cursor-grabbing select-none touch-none"
+            onMouseDown={e => { e.preventDefault(); onGripDown(e.clientX, e.clientY); }}
+            onTouchStart={e => { e.preventDefault(); onGripDown(e.touches[0].clientX, e.touches[0].clientY); }}
+          >
             <GripVertical size={13} />
           </div>
         </div>
