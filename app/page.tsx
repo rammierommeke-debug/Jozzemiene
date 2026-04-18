@@ -74,7 +74,9 @@ function weatherIcon(code: number) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [user, setUser] = useState<"roel" | "emma" | null | "loading">("loading");
+  const [user, setUser] = useState<"roel" | "emma" | null>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("home_user") as "roel" | "emma" | null) : null
+  );
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -88,30 +90,26 @@ export default function HomePage() {
   const widgetKey = (u: string) => `home_widgets_v2_${u}`;
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("home_user") as "roel" | "emma" | null;
-    setUser(savedUser);
-    if (!savedUser) return;
+    if (!user) return;
     try {
-      const saved = localStorage.getItem(widgetKey(savedUser));
+      const saved = localStorage.getItem(widgetKey(user));
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.every((w: WidgetConfig) => w.id && w.type && w.width)) {
           setWidgets(parsed);
         } else {
-          localStorage.removeItem(widgetKey(savedUser));
+          localStorage.removeItem(widgetKey(user));
         }
       }
     } catch {
-      localStorage.removeItem(widgetKey(savedUser));
+      localStorage.removeItem(widgetKey(user));
     }
-  }, []);
+  }, [user]);
 
   function chooseUser(u: "roel" | "emma") {
     localStorage.setItem("home_user", u);
     setUser(u);
   }
-
-  if (user === "loading") return null;
 
   function reset() {
     if (user) localStorage.removeItem(widgetKey(user));
