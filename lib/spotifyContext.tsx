@@ -162,8 +162,6 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
 
   async function playUri(uri: string) {
     if (!deviceIdRef.current || !tokenRef.current) return;
-    // Re-transfer device ownership right before playing to prevent 10s cutoff
-    await transferPlayback(deviceIdRef.current);
     await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceIdRef.current}`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${tokenRef.current}`, "Content-Type": "application/json" },
