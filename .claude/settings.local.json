@@ -12,7 +12,24 @@
       "Bash(git merge:*)",
       "Bash(git pull:*)",
       "Bash(npx vercel:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npm install *)",
+      "Bash(curl -s http://localhost:3000/api/notes)",
+      "Bash(netstat -ano)",
+      "Bash(xargs grep *)",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c ' *)",
+      "Bash(git -C /c/Users/Roel/Desktop/Website add app/page.tsx app/kalender/page.tsx)",
+      "Bash(git -C /c/Users/Roel/Desktop/Website commit -m ' *)",
+      "Bash(git -C /c/Users/Roel/Desktop/Website push)",
+      "Bash(git -C /c/Users/Roel/Desktop/Website add app/page.tsx)",
+      "Bash(git -C /c/Users/Roel/Desktop/Website add app/kalender/page.tsx)",
+      "Bash(git -C /c/Users/Roel/Desktop/Website add app/kalender/page.tsx components/Sidebar.tsx)",
+      "Bash(git remote *)",
+      "Bash(gh issue *)",
+      "Bash(npm run *)",
+      "Bash(npm list *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

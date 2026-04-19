@@ -4,9 +4,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import VervenPanel from "@/components/VervenPanel";
 import AskClaudeButton from "@/components/AskClaudeButton";
-import SpotifyMiniPlayer from "@/components/SpotifyMiniPlayer";
 import { ThemeProvider } from "@/lib/themeContext";
-import { SpotifyProvider } from "@/lib/spotifyContext";
 import SessionProvider from "@/components/SessionProvider";
 
 const playfair = Playfair_Display({
@@ -40,15 +38,12 @@ export default function RootLayout({
       <body className="bg-cream min-h-screen flex">
         <SessionProvider>
           <ThemeProvider>
-            <SpotifyProvider>
-              <Sidebar />
-              <VervenPanel />
-              <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen pb-24 md:pb-8">
-                {children}
-              </main>
-              <AskClaudeButton />
-              <SpotifyMiniPlayer />
-            </SpotifyProvider>
+            <Sidebar />
+            <VervenPanel />
+            <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen pb-24 md:pb-8">
+              {children}
+            </main>
+            <AskClaudeButton />
           </ThemeProvider>
         </SessionProvider>
       </body>

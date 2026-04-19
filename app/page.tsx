@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSpotify } from "@/lib/spotifyContext";
 import { useSession } from "next-auth/react";
 import { Heart, Sun, Calendar, Image, Plus, X, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
 import type { ReactNode } from "react";
@@ -12,7 +11,7 @@ import { nl } from "date-fns/locale";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type WidgetType = "greeting" | "weather" | "notes" | "quicklinks" | "upcoming" | "photo-carousel" | "diary" | "quote" | "spotify";
+type WidgetType = "greeting" | "weather" | "notes" | "quicklinks" | "upcoming" | "photo-carousel" | "diary" | "quote";
 type WidgetWidth = "full" | "half";
 
 interface WidgetConfig {
@@ -41,7 +40,6 @@ const WIDGET_META: Record<WidgetType, { label: string; emoji: string; desc: stri
   "photo-carousel": { label: "Foto carrousel",    emoji: "🖼️", desc: "Foto's uit een album in een carrousel" },
   "diary":          { label: "Dagboek",           emoji: "📖", desc: "Privé dagboekje voor jezelf" },
   "quote":          { label: "Quote",             emoji: "💬", desc: "Een citaat of mooie tekst" },
-  "spotify":        { label: "Spotify",           emoji: "🎵", desc: "Huidig afspelend nummer (enkel Roel)" },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -318,7 +316,6 @@ function WidgetContent({ widget, editMode, onUpdate }: { widget: WidgetConfig; e
     case "photo-carousel": return <PhotoCarouselWidget albumId={widget.albumId} onUpdate={onUpdate} />;
     case "diary":          return <DiaryWidget widgetId={widget.id} />;
     case "quote":          return <QuoteWidget initial={{ text: widget.quoteText ?? "", author: widget.quoteAuthor ?? "" }} onUpdate={onUpdate} />;
-    case "spotify":        return <SpotifyWidget />;
     default:               return null;
   }
 }
@@ -661,130 +658,6 @@ function QuoteWidget({ initial, onUpdate }: { initial: { text: string; author: s
       <p className="font-handwriting text-2xl text-brown leading-relaxed">{text}</p>
       {author && <p className="text-sm text-brown-light mt-2 text-right">{author}</p>}
       <p className="text-[10px] text-brown-light/50 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Klik om te bewerken</p>
-    </div>
-  );
-}
-
-// ── Spotify Now Playing ───────────────────────────────────────────────────────
-
-type SpotifyTrack = { id: string; uri: string; title: string; artist: string; album: string; image: string | null; duration: number };
-
-function SpotifyWidget() {
-  const { connected, playerReady, state, playerRef, playUri } = useSpotify();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SpotifyTrack[]>([]);
-  const [searching, setSearching] = useState(false);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  async function handlePlayUri(uri: string) {
-    await playUri(uri);
-    setQuery(""); setResults([]);
-  }
-
-  function onSearchChange(q: string) {
-    setQuery(q);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (!q.trim()) { setResults([]); return; }
-    setSearching(true);
-    searchTimer.current = setTimeout(async () => {
-      const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(q)}`);
-      const json = await res.json();
-      setResults(Array.isArray(json) ? json : []);
-      setSearching(false);
-    }, 400);
-  }
-
-  if (connected === false) return (
-    <div className="p-5 flex flex-col items-center gap-3 text-center">
-      <p className="text-3xl">🎵</p>
-      <p className="text-sm font-semibold text-brown">Spotify niet gekoppeld</p>
-      <a href="/api/spotify/login" className="px-4 py-2 rounded-full bg-[#1DB954] text-white text-xs font-bold hover:bg-[#1aa34a] transition-colors">
-        Verbinden met Spotify
-      </a>
-    </div>
-  );
-
-  if (!playerReady) return (
-    <div className="p-5 flex items-center gap-3">
-      <div className="w-8 h-8 border-4 border-[#1DB954]/30 border-t-[#1DB954] rounded-full animate-spin shrink-0" />
-      <p className="text-sm text-brown-light">Spotify laden…</p>
-    </div>
-  );
-
-  const pct = state?.progress && state?.duration ? (state.progress / state.duration) * 100 : 0;
-
-  return (
-    <div className="p-4">
-      {/* Track info */}
-      <div className="flex items-center gap-3">
-        {state?.image
-          ? <NextImage src={state.image} alt={state.album} width={56} height={56} className="w-14 h-14 rounded-xl object-cover shadow-sm shrink-0" />
-          : <div className="w-14 h-14 rounded-xl bg-warm flex items-center justify-center text-2xl shrink-0">🎵</div>
-        }
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className={`w-2 h-2 rounded-full shrink-0 ${state?.playing ? "bg-[#1DB954] animate-pulse" : "bg-brown-light"}`} />
-            <p className="text-[10px] font-bold text-brown-light uppercase tracking-wide">
-              {state?.playing ? "Nu aan het spelen" : "Gepauzeerd"}
-            </p>
-          </div>
-          {state?.title
-            ? <><p className="font-semibold text-brown text-sm truncate">{state.title}</p><p className="text-xs text-brown-light truncate">{state.artist}</p></>
-            : <p className="text-sm text-brown-light italic">Zoek een nummer om te starten</p>
-          }
-        </div>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-4 mt-4">
-        <button onClick={() => playerRef.current?.previousTrack()}
-          className="w-9 h-9 rounded-full bg-warm flex items-center justify-center text-brown hover:bg-[#1DB954]/20 hover:text-[#1DB954] transition-colors">
-          <ChevronLeft size={18} />
-        </button>
-        <button onClick={() => playerRef.current?.togglePlay()}
-          className="w-11 h-11 rounded-full bg-[#1DB954] flex items-center justify-center text-white hover:bg-[#1aa34a] transition-colors shadow-sm">
-          {state?.playing
-            ? <span className="flex gap-0.5"><span className="w-1 h-4 bg-white rounded-full"/><span className="w-1 h-4 bg-white rounded-full"/></span>
-            : <span className="ml-0.5 border-l-[14px] border-y-[9px] border-y-transparent border-l-white" />
-          }
-        </button>
-        <button onClick={() => playerRef.current?.nextTrack()}
-          className="w-9 h-9 rounded-full bg-warm flex items-center justify-center text-brown hover:bg-[#1DB954]/20 hover:text-[#1DB954] transition-colors">
-          <ChevronRight size={18} />
-        </button>
-      </div>
-
-      {/* Progress */}
-      {state?.title && (
-        <div className="mt-3 h-1 bg-warm rounded-full overflow-hidden">
-          <div className="h-full bg-[#1DB954] rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="mt-4 relative">
-        <input value={query} onChange={e => onSearchChange(e.target.value)}
-          placeholder="Zoek een nummer..."
-          className="w-full bg-warm rounded-xl px-3 py-2 text-sm text-brown placeholder-brown-light/60 focus:outline-none focus:ring-2 focus:ring-[#1DB954]/40" />
-        {searching && <span className="absolute right-3 top-2.5 text-xs text-brown-light">…</span>}
-      </div>
-      {results.length > 0 && (
-        <div className="mt-2 flex flex-col gap-1">
-          {results.map(t => (
-            <button key={t.id} onClick={() => handlePlayUri(t.uri)}
-              className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-[#1DB954]/10 transition-colors text-left w-full">
-              {t.image
-                ? <NextImage src={t.image} alt="" width={36} height={36} className="w-9 h-9 rounded-lg object-cover shrink-0" />
-                : <div className="w-9 h-9 rounded-lg bg-warm shrink-0" />
-              }
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-brown truncate">{t.title}</p>
-                <p className="text-[10px] text-brown-light truncate">{t.artist}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
