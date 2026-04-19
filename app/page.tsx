@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSpotify } from "@/lib/spotifyContext";
 import { useSession } from "next-auth/react";
 import { Heart, Sun, Calendar, Image, Plus, X, Settings, Check, ChevronLeft, ChevronRight, BookOpen, Quote, AlignJustify, Columns } from "lucide-react";
 import type { ReactNode } from "react";
@@ -668,117 +669,15 @@ function QuoteWidget({ initial, onUpdate }: { initial: { text: string; author: s
 
 type SpotifyTrack = { id: string; uri: string; title: string; artist: string; album: string; image: string | null; duration: number };
 
-type PlayerState = {
-  playing: boolean;
-  title: string;
-  artist: string;
-  album: string;
-  image: string | null;
-  progress: number;
-  duration: number;
-};
-
-declare global {
-  interface Window {
-    Spotify: {
-      Player: new (opts: {
-        name: string;
-        getOAuthToken: (cb: (token: string) => void) => void;
-        volume: number;
-      }) => SpotifyPlayerInstance;
-    };
-    onSpotifyWebPlaybackSDKReady: () => void;
-  }
-}
-
-interface SpotifyPlayerInstance {
-  connect(): Promise<boolean>;
-  disconnect(): void;
-  addListener(event: string, cb: (data: unknown) => void): void;
-  togglePlay(): Promise<void>;
-  previousTrack(): Promise<void>;
-  nextTrack(): Promise<void>;
-  getCurrentState(): Promise<{ paused: boolean; position: number; duration: number; track_window: { current_track: { name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] } } } } | null>;
-}
-
 function SpotifyWidget() {
-  const [connected, setConnected] = useState<boolean | null>(null);
-  const [playerReady, setPlayerReady] = useState(false);
-  const [state, setState] = useState<PlayerState | null>(null);
+  const { connected, playerReady, state, playerRef, playUri } = useSpotify();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SpotifyTrack[]>([]);
   const [searching, setSearching] = useState(false);
-  const playerRef = useRef<SpotifyPlayerInstance | null>(null);
-  const deviceIdRef = useRef<string | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tokenRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    // Check connected
-    fetch("/api/spotify/token").then(r => {
-      if (r.status === 404) { setConnected(false); return; }
-      return r.json();
-    }).then(data => {
-      if (!data?.token) return;
-      tokenRef.current = data.token;
-      setConnected(true);
-      loadSDK(data.token);
-    });
-  }, []);
-
-  function loadSDK(token: string) {
-    if (document.getElementById("spotify-sdk")) { initPlayer(token); return; }
-    const script = document.createElement("script");
-    script.id = "spotify-sdk";
-    script.src = "https://sdk.scdn.co/spotify-player.js";
-    document.body.appendChild(script);
-    window.onSpotifyWebPlaybackSDKReady = () => initPlayer(token);
-  }
-
-  function initPlayer(token: string) {
-    const player = new window.Spotify.Player({
-      name: "Jozzemiene",
-      getOAuthToken: async cb => {
-        const res = await fetch("/api/spotify/token");
-        const data = await res.json();
-        tokenRef.current = data.token;
-        cb(data.token);
-      },
-      volume: 0.8,
-    });
-
-    player.addListener("ready", (data) => {
-      const { device_id } = data as { device_id: string };
-      deviceIdRef.current = device_id;
-      setPlayerReady(true);
-    });
-
-    player.addListener("player_state_changed", (s) => {
-      if (!s) return;
-      const ps = s as { paused: boolean; position: number; duration: number; track_window: { current_track: { name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] } } } };
-      const track = ps.track_window.current_track;
-      setState({
-        playing: !ps.paused,
-        title: track.name,
-        artist: track.artists.map(a => a.name).join(", "),
-        album: track.album.name,
-        image: track.album.images[0]?.url ?? null,
-        progress: ps.position,
-        duration: ps.duration,
-      });
-    });
-
-    player.connect();
-    playerRef.current = player;
-  }
-
-  async function playUri(uri: string) {
-    if (!deviceIdRef.current || !tokenRef.current) return;
-    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceIdRef.current}`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${tokenRef.current}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ uris: [uri] }),
-    });
+  async function handlePlayUri(uri: string) {
+    await playUri(uri);
     setQuery(""); setResults([]);
   }
 
@@ -872,7 +771,7 @@ function SpotifyWidget() {
       {results.length > 0 && (
         <div className="mt-2 flex flex-col gap-1">
           {results.map(t => (
-            <button key={t.id} onClick={() => playUri(t.uri)}
+            <button key={t.id} onClick={() => handlePlayUri(t.uri)}
               className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-[#1DB954]/10 transition-colors text-left w-full">
               {t.image
                 ? <NextImage src={t.image} alt="" width={36} height={36} className="w-9 h-9 rounded-lg object-cover shrink-0" />
