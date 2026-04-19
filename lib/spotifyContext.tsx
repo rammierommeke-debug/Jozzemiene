@@ -83,7 +83,11 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   function loadSDK(token: string) {
-    if (document.getElementById("spotify-sdk")) { initPlayer(token); return; }
+    if (document.getElementById("spotify-sdk")) {
+      if (window.Spotify) initPlayer(token);
+      else window.onSpotifyWebPlaybackSDKReady = () => initPlayer(token);
+      return;
+    }
     const script = document.createElement("script");
     script.id = "spotify-sdk";
     script.src = "https://sdk.scdn.co/spotify-player.js";
@@ -104,10 +108,19 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       volume: 0.8,
     });
 
-    player.addListener("ready", (data) => {
+    player.addListener("ready", async (data) => {
       const { device_id } = data as { device_id: string };
       deviceIdRef.current = device_id;
       setPlayerReady(true);
+      // Transfer playback to this device so it stays active
+      await transferPlayback(device_id);
+    });
+
+    // Reconnect when device goes offline
+    player.addListener("not_ready", async () => {
+      setPlayerReady(false);
+      await new Promise(r => setTimeout(r, 2000));
+      player.connect();
     });
 
     player.addListener("player_state_changed", (s) => {
@@ -134,8 +147,23 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     playerRef.current = player;
   }
 
+  async function transferPlayback(deviceId: string) {
+    const res = await fetch("/api/spotify/token");
+    const data = await res.json();
+    if (!data?.token) return;
+    tokenRef.current = data.token;
+    // Set device as active but don't force-start playback
+    await fetch("https://api.spotify.com/v1/me/player", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${data.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+    });
+  }
+
   async function playUri(uri: string) {
     if (!deviceIdRef.current || !tokenRef.current) return;
+    // Re-transfer device ownership right before playing to prevent 10s cutoff
+    await transferPlayback(deviceIdRef.current);
     await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceIdRef.current}`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${tokenRef.current}`, "Content-Type": "application/json" },
