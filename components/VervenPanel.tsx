@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { X, RotateCcw, Plus, Trash2, ChevronDown, ChevronUp, Paintbrush } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, RotateCcw, Plus, Trash2, ChevronDown, ChevronUp, Paintbrush, GripVertical } from "lucide-react";
 import { useTheme, DEFAULT_NAV, PRESET_THEMES, ThemeColors, NavItem } from "@/lib/themeContext";
 import { ICON_MAP, ICON_NAMES, getIcon } from "@/lib/iconMap";
 
@@ -16,14 +16,18 @@ const COLOR_LABELS: { key: keyof ThemeColors; label: string; description: string
 ];
 
 export default function VervenPanel() {
-  const { config, setColors, setNavItems, resetColors, panelOpen, setPanelOpen } = useTheme();
-  const [tab, setTab] = useState<"kleuren" | "navigatie">("kleuren");
+  const { config, setColors, setNavItems, setTexts, resetColors, panelOpen, setPanelOpen } = useTheme();
+  const [tab, setTab] = useState<"kleuren" | "navigatie" | "tekst">("kleuren");
   const [editingNav, setEditingNav] = useState<string | null>(null);
   const [showIconPicker, setShowIconPicker] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [newIcon, setNewIcon] = useState("Star");
   const [newPageType, setNewPageType] = useState("tekst");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const dragItem = useRef<string | null>(null);
+  const [pageTitle, setPageTitle] = useState(config.pageTitle || "Jozzemiene");
+  const [tagline, setTagline] = useState(config.tagline || "built to remember");
 
   if (!panelOpen) return null;
 
@@ -66,6 +70,30 @@ export default function VervenPanel() {
     setNavItems(DEFAULT_NAV);
   }
 
+  function handleDragStart(href: string) {
+    dragItem.current = href;
+  }
+
+  function handleDragOver(e: React.DragEvent, href: string) {
+    e.preventDefault();
+    setDragOver(href);
+  }
+
+  function handleDrop(targetHref: string) {
+    if (!dragItem.current || dragItem.current === targetHref) {
+      setDragOver(null);
+      return;
+    }
+    const items = [...config.navItems];
+    const fromIdx = items.findIndex(i => i.href === dragItem.current);
+    const toIdx = items.findIndex(i => i.href === targetHref);
+    const [moved] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, moved);
+    setNavItems(items);
+    dragItem.current = null;
+    setDragOver(null);
+  }
+
   const NewIconComp = getIcon(newIcon);
 
   return (
@@ -88,7 +116,7 @@ export default function VervenPanel() {
 
         {/* Tabs */}
         <div className="flex border-b border-warm">
-          {(["kleuren", "navigatie"] as const).map(t => (
+          {(["kleuren", "navigatie", "tekst"] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -96,7 +124,7 @@ export default function VervenPanel() {
                 tab === t ? "text-terracotta border-b-2 border-terracotta" : "text-brown-light hover:text-brown"
               }`}
             >
-              {t === "kleuren" ? "🎨 Kleuren" : "🧭 Navigatie"}
+              {t === "kleuren" ? "🎨 Kleuren" : t === "navigatie" ? "🧭 Navigatie" : "✏️ Tekst"}
             </button>
           ))}
         </div>
@@ -174,8 +202,17 @@ export default function VervenPanel() {
                     const IconComp = getIcon(item.iconName);
                     const isEditing = editingNav === item.href;
                     return (
-                      <div key={item.href} className="bg-warm rounded-2xl overflow-hidden">
+                      <div
+                        key={item.href}
+                        draggable
+                        onDragStart={() => handleDragStart(item.href)}
+                        onDragOver={e => handleDragOver(e, item.href)}
+                        onDrop={() => handleDrop(item.href)}
+                        onDragEnd={() => setDragOver(null)}
+                        className={`bg-warm rounded-2xl overflow-hidden transition-all ${dragOver === item.href ? "ring-2 ring-terracotta opacity-80" : ""}`}
+                      >
                         <div className="flex items-center gap-3 p-3">
+                          <GripVertical size={14} className="text-brown-light/50 cursor-grab shrink-0" />
                           {/* Icon */}
                           <div
                             className="w-9 h-9 rounded-xl bg-cream flex items-center justify-center cursor-pointer hover:bg-terracotta hover:text-cream transition-colors shrink-0"
@@ -342,6 +379,38 @@ export default function VervenPanel() {
                 <RotateCcw size={14} />
                 Standaard navigatie herstellen
               </button>
+            </>
+          )}
+          {/* TEKST TAB */}
+          {tab === "tekst" && (
+            <>
+              <div>
+                <p className="text-xs font-semibold text-brown-light uppercase tracking-wide mb-3">Paginatekst aanpassen</p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-semibold text-brown">Naam bovenaan</label>
+                    <input
+                      value={pageTitle}
+                      onChange={e => setPageTitle(e.target.value)}
+                      className="bg-warm rounded-xl px-3 py-2 text-sm text-brown border border-warm focus:outline-none focus:border-terracotta font-handwriting text-xl"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-semibold text-brown">Ondertitel</label>
+                    <input
+                      value={tagline}
+                      onChange={e => setTagline(e.target.value)}
+                      className="bg-warm rounded-xl px-3 py-2 text-sm text-brown border border-warm focus:outline-none focus:border-terracotta"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setTexts(pageTitle, tagline)}
+                    className="bg-terracotta text-cream rounded-xl py-2 text-sm font-semibold hover:bg-terracotta/80 transition-colors"
+                  >
+                    Opslaan
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>

@@ -26,6 +26,8 @@ export type NavItem = {
 export type ThemeConfig = {
   colors: ThemeColors;
   navItems: NavItem[];
+  pageTitle?: string;
+  tagline?: string;
 };
 
 export const DEFAULT_COLORS: ThemeColors = {
@@ -147,6 +149,7 @@ type ThemeContextType = {
   config: ThemeConfig;
   setColors: (colors: ThemeColors) => void;
   setNavItems: (items: NavItem[]) => void;
+  setTexts: (pageTitle: string, tagline: string) => void;
   resetColors: () => void;
   panelOpen: boolean;
   setPanelOpen: (open: boolean) => void;
@@ -193,12 +196,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("jozzemiene-theme", JSON.stringify(next));
   }
 
+  function setTexts(pageTitle: string, tagline: string) {
+    const next = { ...config, pageTitle, tagline };
+    setConfig(next);
+    localStorage.setItem("jozzemiene-theme", JSON.stringify(next));
+  }
+
   function resetColors() {
     setColors(DEFAULT_COLORS);
   }
 
   return (
-    <ThemeContext.Provider value={{ config, setColors, setNavItems, resetColors, panelOpen, setPanelOpen }}>
+    <ThemeContext.Provider value={{ config, setColors, setNavItems, setTexts, resetColors, panelOpen, setPanelOpen }}>
       {children}
     </ThemeContext.Provider>
   );

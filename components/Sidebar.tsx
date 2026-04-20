@@ -87,7 +87,7 @@ export default function Sidebar() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 mb-1">
               <Heart className="text-rose fill-rose" size={20} />
-              <span className="font-handwriting text-2xl text-brown">Jozzemiene</span>
+              <span className="font-handwriting text-2xl text-brown">{config.pageTitle || "Jozzemiene"}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Link href="/feedback"
@@ -106,11 +106,11 @@ export default function Sidebar() {
           </div>
           <div className="flex items-center gap-1.5 ml-7">
             <BookMarked size={11} className="text-brown-light" />
-            <p className="text-brown-light text-xs font-body">built to remember</p>
+            <p className="text-brown-light text-xs font-body">{config.tagline || "built to remember"}</p>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
+        <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto sidebar-nav">
           {navItems.map(({ href, iconName, label }) => {
             const Icon = getIcon(iconName);
             const active = pathname === href;
@@ -186,11 +186,11 @@ export default function Sidebar() {
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <Heart className="text-rose fill-rose" size={18} />
-            <span className="font-handwriting text-xl text-brown">Jozzemiene</span>
+            <span className="font-handwriting text-xl text-brown">{config.pageTitle || "Jozzemiene"}</span>
           </div>
           <div className="flex items-center gap-1 ml-6">
             <BookMarked size={9} className="text-brown-light" />
-            <p className="text-brown-light text-[10px] font-body leading-tight">built to remember</p>
+            <p className="text-brown-light text-[10px] font-body leading-tight">{config.tagline || "built to remember"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export default function Sidebar() {
 
       {/* Mobiele bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-warm border-t border-warm">
-        <div className="flex items-center overflow-x-auto scrollbar-hide px-2 py-2" style={{ scrollbarWidth: "none" }}>
+        <div className="flex items-center overflow-x-auto px-2 py-2" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {navItems.map(({ href, iconName, label }) => {
             const Icon = getIcon(iconName);
             const active = pathname === href;
