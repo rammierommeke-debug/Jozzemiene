@@ -196,10 +196,27 @@ export default function HomePage() {
   if (!user) return null;
 
   return (
-    <div className="max-w-3xl mx-auto pt-14 md:pt-0 pb-10">
+    <div className="max-w-5xl mx-auto pt-18 md:pt-0 pb-10">
+      <div className="soft-panel relative mb-6 overflow-hidden rounded-[2rem] px-5 py-5 md:px-7 md:py-6">
+        <div className="petal-dot right-8 top-3 h-24 w-24" />
+        <div className="petal-dot bottom-0 left-10 h-20 w-20" />
+        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-brown-light">Jullie plekje</p>
+            <h1 className="font-display text-3xl text-brown md:text-4xl">Een zachter en mooier thuis voor al jullie herinneringen</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brown-light">
+              Alles voelt nu wat warmer, luchtiger en meer als een liefdevol dashboard in plaats van een verzameling losse widgets.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            <span className="rounded-full bg-white/75 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-terracotta shadow-sm">Home</span>
+            <span className="rounded-full bg-sage/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sage">Gezellig</span>
+          </div>
+        </div>
+      </div>
 
       {/* Edit bar */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="soft-panel flex flex-col gap-3 mb-6 rounded-[1.75rem] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
         <div>
           {editMode && selectedIdx !== null && (
             <p className="text-xs text-terracotta font-semibold animate-pulse">
@@ -209,11 +226,14 @@ export default function HomePage() {
           {editMode && selectedIdx === null && (
             <p className="text-xs text-brown-light">Klik een widget om hem te verplaatsen</p>
           )}
+          {!editMode && (
+            <p className="text-xs text-brown-light">Pas de volgorde en uitstraling van je home-dashboard aan wanneer je wil.</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {editMode && (
             <button onClick={reset}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warm text-brown-light text-xs font-semibold hover:text-rose transition-colors border border-warm">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/75 text-brown-light text-xs font-semibold hover:text-rose transition-colors border border-white/60">
               ↺ Reset
             </button>
           )}
@@ -231,7 +251,7 @@ export default function HomePage() {
       </div>
 
       {/* Widget rows */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         {renderRows()}
       </div>
 
@@ -239,7 +259,7 @@ export default function HomePage() {
       {showPicker && (
         <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-end md:items-center justify-center p-4"
           onClick={() => setShowPicker(false)}>
-          <div className="bg-cream rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
+          <div className="soft-panel rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-warm">
               <p className="font-display text-lg text-brown">Widget toevoegen</p>
@@ -278,7 +298,7 @@ function WidgetShell({ widget, editMode, isSelected, hasSelection, onClick, onRe
     : "";
 
   return (
-    <div className={`widget-card relative transition-all duration-150 ${ringClass}`}
+    <div className={`widget-card group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(107,76,59,0.10)] ${ringClass}`}
       onClick={editMode ? onClick : undefined}
     >
       {/* Edit controls */}
@@ -328,13 +348,17 @@ function GreetingWidget() {
   const greeting = hour < 6 ? "Goeienacht" : hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
   const dateStr = now.toLocaleDateString("nl-NL", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return (
-    <div className="px-5 py-4">
-      <div className="flex items-center gap-3 mb-1">
-        <Sun className="text-terracotta" size={28} />
-        <h1 className="font-display text-4xl text-brown">{greeting}</h1>
-        <Heart className="text-rose fill-rose" size={24} />
+    <div className="relative overflow-hidden px-5 py-5 md:px-6 md:py-6">
+      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-terracotta/10 via-rose-light/20 to-sage-light/20" />
+      <div className="absolute -right-6 top-3 h-24 w-24 rounded-full bg-white/35 blur-xl" />
+      <div className="relative flex flex-wrap items-center gap-3 mb-2">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/70 shadow-sm">
+          <Sun className="text-terracotta" size={24} />
+        </div>
+        <h1 className="font-display text-4xl text-brown md:text-5xl">{greeting}</h1>
+        <Heart className="text-rose fill-rose" size={22} />
       </div>
-      <p className="font-handwriting text-xl text-brown-light ml-1 capitalize">{dateStr}</p>
+      <p className="font-handwriting text-2xl text-brown-light capitalize">{dateStr}</p>
     </div>
   );
 }
@@ -356,16 +380,18 @@ function WeatherWidget() {
   if (!weather.length) return null;
   return (
     <div className="overflow-hidden rounded-3xl">
-      <p className="text-xs font-semibold text-brown-light uppercase tracking-wide px-4 pt-3 pb-1">Ruiselede — deze week</p>
-      <div className="grid grid-cols-7 divide-x divide-warm/60">
+      <div className="bg-gradient-to-r from-sage/14 via-white/20 to-terracotta/10 px-4 pt-4 pb-3">
+        <p className="text-xs font-semibold text-brown-light uppercase tracking-[0.18em]">Ruiselede — deze week</p>
+      </div>
+      <div className="grid grid-cols-7 divide-x divide-white/60">
         {weather.map((day, i) => {
           const d = new Date(day.date);
           const label = i === 0 ? "Vand." : i === 1 ? "Morg." : d.toLocaleDateString("nl-NL", { weekday: "short" }).slice(0, 2);
           return (
-            <div key={day.date} className={`flex flex-col items-center py-3 gap-1 ${i === 0 ? "bg-terracotta/10" : ""}`}>
+            <div key={day.date} className={`flex flex-col items-center py-4 gap-1.5 ${i === 0 ? "bg-terracotta/10" : "bg-white/35"}`}>
               <span className="text-[10px] font-semibold text-brown-light capitalize">{label}</span>
-              <span className="text-xl">{weatherIcon(day.code)}</span>
-              <span className="text-xs font-bold text-brown">{day.max}°</span>
+              <span className="text-2xl">{weatherIcon(day.code)}</span>
+              <span className="text-sm font-bold text-brown">{day.max}°</span>
               <span className="text-[10px] text-brown-light">{day.min}°</span>
             </div>
           );
@@ -379,14 +405,17 @@ function WeatherWidget() {
 
 function QuickLinksWidget() {
   return (
-    <div className="p-4">
-      <p className="text-xs font-semibold text-brown-light uppercase tracking-wide mb-3">Snelkoppelingen</p>
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+    <div className="p-4 md:p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-xs font-semibold text-brown-light uppercase tracking-[0.18em]">Snelkoppelingen</p>
+        <span className="rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold text-brown-light">favorieten</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {QUICK_LINKS.map(l => (
           <Link key={l.href} href={l.href}
-            className={`${l.color} rounded-2xl p-3 flex flex-col items-center gap-1.5 border border-warm hover:shadow-md hover:-translate-y-0.5 transition-all`}>
-            <span className="text-2xl">{l.emoji}</span>
-            <span className="text-[10px] font-semibold text-brown text-center leading-tight">{l.label}</span>
+            className={`${l.color} rounded-[1.35rem] p-3.5 flex flex-col items-center gap-2 border border-white/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all`}>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/65 text-2xl shadow-sm">{l.emoji}</span>
+            <span className="text-[11px] font-semibold text-brown text-center leading-tight">{l.label}</span>
           </Link>
         ))}
       </div>
@@ -409,23 +438,28 @@ function UpcomingWidget() {
     }).catch(() => {});
   }, []);
   return (
-    <div className="p-4 h-full">
+    <div className="p-4 h-full md:p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Calendar size={16} className="text-sage" />
-        <p className="text-xs font-semibold text-brown-light uppercase tracking-wide">Komende afspraken</p>
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sage/12">
+          <Calendar size={16} className="text-sage" />
+        </div>
+        <p className="text-xs font-semibold text-brown-light uppercase tracking-[0.18em]">Komende afspraken</p>
       </div>
       {events.length === 0
         ? <p className="text-sm text-brown-light italic">Geen geplande afspraken 🌿</p>
-        : <ul className="flex flex-col gap-2">
+        : <ul className="flex flex-col gap-2.5">
             {events.map(ev => {
               const d = parseISO(ev.date);
               const dayLabel = isToday(d) ? "Vandaag" : isTomorrow(d) ? "Morgen" : format(d, "EEE d MMM", { locale: nl });
               return (
-                <li key={ev.id} className="flex items-start gap-2">
-                  <span className="text-[10px] font-bold text-sage bg-sage/10 rounded-lg px-1.5 py-1 mt-0.5 whitespace-nowrap capitalize">{dayLabel}</span>
-                  <div>
+                <li key={ev.id} className="flex items-start gap-3 rounded-2xl bg-white/55 px-3 py-3 border border-white/60">
+                  <span className="text-[10px] font-bold text-sage bg-sage/12 rounded-xl px-2 py-1 mt-0.5 whitespace-nowrap capitalize">{dayLabel}</span>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold text-brown leading-tight">{ev.title}</p>
-                    {ev.time && <p className="text-[10px] text-brown-light">{ev.time}</p>}
+                    <div className="mt-1 flex items-center gap-2 text-[10px] text-brown-light">
+                      {ev.time && <p>{ev.time}</p>}
+                      {ev.person && <p className="rounded-full bg-rose-light/35 px-2 py-0.5">{ev.person}</p>}
+                    </div>
                   </div>
                 </li>
               );

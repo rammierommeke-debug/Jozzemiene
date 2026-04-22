@@ -27,19 +27,65 @@
 
 @layer base {
   html {
-    background-color: var(--color-cream);
+    background:
+      radial-gradient(circle at top left, rgba(212, 132, 138, 0.16), transparent 32%),
+      radial-gradient(circle at top right, rgba(122, 158, 126, 0.16), transparent 28%),
+      linear-gradient(180deg, #fffaf3 0%, #fdf6ec 46%, #f8efe3 100%);
     color: var(--color-brown);
     font-family: var(--font-body);
     -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100vh;
+    background: transparent;
   }
 
   * {
     -webkit-font-smoothing: antialiased;
   }
 
+  *::selection {
+    background: rgba(194, 113, 79, 0.18);
+    color: var(--color-brown);
+  }
+
   h1, h2, h3 {
     font-family: var(--font-display);
   }
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: auto;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(14px);
+  opacity: 0.8;
+}
+
+body::before {
+  top: 96px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9), transparent 30%),
+    linear-gradient(135deg, rgba(212, 132, 138, 0.22), rgba(232, 180, 184, 0.08));
+}
+
+body::after {
+  bottom: 48px;
+  left: -40px;
+  width: 260px;
+  height: 260px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 65% 35%, rgba(255, 255, 255, 0.72), transparent 28%),
+    linear-gradient(135deg, rgba(122, 158, 126, 0.2), rgba(245, 230, 208, 0.12));
 }
 
 /* Sidebar scrollbar */
@@ -87,12 +133,42 @@
   .border-border { border-color: var(--color-border); }
 
   .widget-card {
-    background: white;
-    border: 1px solid var(--color-border);
-    border-radius: 1.5rem;
+    position: relative;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(253, 246, 236, 0.92));
+    border: 1px solid rgba(226, 205, 181, 0.85);
+    border-radius: 1.75rem;
     box-shadow:
-      0 1px 3px rgba(107, 76, 59, 0.06),
-      0 4px 12px rgba(107, 76, 59, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      0 1px 2px rgba(107, 76, 59, 0.05),
+      0 16px 40px rgba(107, 76, 59, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+  }
+
+  .widget-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.42), transparent 42%);
+  }
+
+  .soft-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 250, 243, 0.96), rgba(245, 230, 208, 0.9));
+    border: 1px solid rgba(226, 205, 181, 0.9);
+    box-shadow:
+      0 8px 26px rgba(107, 76, 59, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(10px);
+  }
+
+  .petal-dot {
+    position: absolute;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.34);
+    pointer-events: none;
   }
 }
