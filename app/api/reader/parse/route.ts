@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
   if (ext === "pdf") {
     const buffer = Buffer.from(await file.arrayBuffer());
     // dynamic import to avoid edge runtime issues
-    const pdfParse = (await import("pdf-parse")).default;
+    const pdfParseModule = await import("pdf-parse");
+    const pdfParse = (pdfParseModule as unknown as { default: typeof pdfParseModule }).default ?? pdfParseModule;
     const data = await pdfParse(buffer);
     const chunks = splitIntoChunks(data.text);
     return NextResponse.json({ title: file.name.replace(/\.pdf$/i, ""), chunks });
