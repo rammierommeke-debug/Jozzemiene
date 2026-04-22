@@ -29,8 +29,9 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     // dynamic import to avoid edge runtime issues
     const pdfParseModule = await import("pdf-parse");
-    const pdfParse = (pdfParseModule as unknown as { default: typeof pdfParseModule }).default ?? pdfParseModule;
-    const data = await pdfParse(buffer);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfParse = (pdfParseModule as any).default ?? pdfParseModule;
+    const data = await pdfParse(buffer) as { text: string };
     const chunks = splitIntoChunks(data.text);
     return NextResponse.json({ title: file.name.replace(/\.pdf$/i, ""), chunks });
   }
