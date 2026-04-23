@@ -35,7 +35,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${playfair.variable} ${lato.variable} ${caveat.variable}`}>
-      <body className="min-h-screen flex relative overflow-x-hidden">
+      <body className="min-h-screen flex relative overflow-x-clip">
         <SessionProvider>
           <ThemeProvider>
             <Sidebar />

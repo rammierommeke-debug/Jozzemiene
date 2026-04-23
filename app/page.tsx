@@ -197,21 +197,6 @@ export default function HomePage() {
 
   return (
     <div className="max-w-5xl mx-auto pt-18 md:pt-0 pb-10">
-      <div className="soft-panel relative mb-6 overflow-hidden rounded-[2rem] px-5 py-5 md:px-7 md:py-6">
-        <div className="petal-dot right-8 top-3 h-24 w-24" />
-        <div className="petal-dot bottom-0 left-10 h-20 w-20" />
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-brown-light">Jullie plekje</p>
-            <h1 className="font-display text-3xl text-brown md:text-4xl">Welkom terug 🌸</h1>
-          </div>
-          <div className="flex items-center gap-2 self-start md:self-auto">
-            <span className="rounded-full bg-white/75 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-terracotta shadow-sm">Home</span>
-            <span className="rounded-full bg-sage/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sage">Gezellig</span>
-          </div>
-        </div>
-      </div>
-
       {/* Edit bar */}
       <div className="soft-panel flex flex-col gap-3 mb-6 rounded-[1.75rem] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
         <div>
