@@ -40,7 +40,7 @@ export default function RootLayout({
           <ThemeProvider>
             <Sidebar />
             <VervenPanel />
-            <main className="relative z-10 flex-1 md:ml-64 px-4 pt-20 pb-28 md:p-6 md:pb-8 lg:p-8 min-h-screen">
+            <main className="relative z-10 flex-1 md:ml-64 p-4 md:p-6 lg:p-8 min-h-screen pb-24 md:pb-8">
               {children}
             </main>
             <AskClaudeButton />

@@ -196,7 +196,7 @@ export default function HomePage() {
   if (!user) return null;
 
   return (
-    <div className="max-w-5xl mx-auto pb-10">
+    <div className="max-w-5xl mx-auto pt-18 md:pt-0 pb-10">
       <div className="soft-panel relative mb-6 overflow-hidden rounded-[2rem] px-5 py-5 md:px-7 md:py-6">
         <div className="petal-dot right-8 top-3 h-24 w-24" />
         <div className="petal-dot bottom-0 left-10 h-20 w-20" />
@@ -380,7 +380,7 @@ function WeatherWidget() {
       <div className="bg-gradient-to-r from-sage/14 via-white/20 to-terracotta/10 px-4 pt-4 pb-3">
         <p className="text-xs font-semibold text-brown-light uppercase tracking-[0.18em]">Ruiselede — deze week</p>
       </div>
-      <div className="grid grid-cols-7 divide-x divide-white/60 overflow-x-auto">
+      <div className="grid grid-cols-7 divide-x divide-white/60">
         {weather.map((day, i) => {
           const d = new Date(day.date);
           const label = i === 0 ? "Vand." : i === 1 ? "Morg." : d.toLocaleDateString("nl-NL", { weekday: "short" }).slice(0, 2);
