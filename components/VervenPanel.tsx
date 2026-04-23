@@ -102,26 +102,27 @@ export default function VervenPanel() {
       <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" onClick={() => setPanelOpen(false)} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 h-screen w-96 max-w-[95vw] z-50 bg-cream shadow-2xl flex flex-col border-l border-warm">
+      <div className="fixed right-0 top-0 z-50 h-screen w-full max-w-[95vw] p-2 sm:w-96 sm:p-3">
+        <div className="soft-panel flex h-full flex-col overflow-hidden rounded-[2rem] border-white/60 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-warm">
+        <div className="flex items-center justify-between p-5 border-b border-white/50">
           <div className="flex items-center gap-2">
             <Paintbrush size={20} className="text-terracotta" />
             <h2 className="font-display text-xl text-brown">Verven</h2>
           </div>
-          <button onClick={() => setPanelOpen(false)} className="text-brown-light hover:text-rose transition-colors">
+          <button onClick={() => setPanelOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/70 text-brown-light shadow-sm transition-colors hover:text-rose">
             <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-warm">
+        <div className="flex border-b border-white/50 px-3 pt-3">
           {(["kleuren", "navigatie", "tekst"] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors ${
-                tab === t ? "text-terracotta border-b-2 border-terracotta" : "text-brown-light hover:text-brown"
+              className={`flex-1 rounded-t-2xl px-3 py-3 text-sm font-semibold capitalize transition-colors ${
+                tab === t ? "bg-white/70 text-terracotta shadow-sm" : "text-brown-light hover:text-brown"
               }`}
             >
               {t === "kleuren" ? "🎨 Kleuren" : t === "navigatie" ? "🧭 Navigatie" : "✏️ Tekst"}
@@ -159,7 +160,7 @@ export default function VervenPanel() {
                 <p className="text-xs font-semibold text-brown-light uppercase tracking-wide mb-3">Kleuren aanpassen</p>
                 <div className="flex flex-col gap-3">
                   {COLOR_LABELS.map(({ key, label, description }) => (
-                    <div key={key} className="flex items-center gap-3 bg-warm rounded-2xl p-3">
+                    <div key={key} className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/55 p-3">
                       <div className="relative shrink-0">
                         <div
                           className="w-10 h-10 rounded-xl border-2 border-white shadow-sm cursor-pointer"
@@ -209,7 +210,7 @@ export default function VervenPanel() {
                         onDragOver={e => handleDragOver(e, item.href)}
                         onDrop={() => handleDrop(item.href)}
                         onDragEnd={() => setDragOver(null)}
-                        className={`bg-warm rounded-2xl overflow-hidden transition-all ${dragOver === item.href ? "ring-2 ring-terracotta opacity-80" : ""}`}
+                        className={`overflow-hidden rounded-2xl border border-white/60 bg-white/55 transition-all ${dragOver === item.href ? "ring-2 ring-terracotta opacity-80" : ""}`}
                       >
                         <div className="flex items-center gap-3 p-3">
                           <GripVertical size={14} className="text-brown-light/50 cursor-grab shrink-0" />
@@ -292,7 +293,7 @@ export default function VervenPanel() {
               {/* Add custom section */}
               <div>
                 {showAddForm ? (
-                  <div className="bg-warm rounded-2xl p-4 flex flex-col gap-3">
+                  <div className="rounded-2xl border border-white/60 bg-white/55 p-4 flex flex-col gap-3">
                     <p className="text-sm font-semibold text-brown">Nieuwe rubriek</p>
                     <input
                       autoFocus
@@ -413,6 +414,7 @@ export default function VervenPanel() {
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
     </>
