@@ -196,17 +196,14 @@ export default function HomePage() {
   if (!user) return null;
 
   return (
-    <div className="max-w-5xl mx-auto pt-18 md:pt-0 pb-10">
+    <div className="max-w-5xl mx-auto pb-10">
       <div className="soft-panel relative mb-6 overflow-hidden rounded-[2rem] px-5 py-5 md:px-7 md:py-6">
         <div className="petal-dot right-8 top-3 h-24 w-24" />
         <div className="petal-dot bottom-0 left-10 h-20 w-20" />
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-brown-light">Jullie plekje</p>
-            <h1 className="font-display text-3xl text-brown md:text-4xl">Een zachter en mooier thuis voor al jullie herinneringen</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brown-light">
-              Alles voelt nu wat warmer, luchtiger en meer als een liefdevol dashboard in plaats van een verzameling losse widgets.
-            </p>
+            <h1 className="font-display text-3xl text-brown md:text-4xl">Welkom terug 🌸</h1>
           </div>
           <div className="flex items-center gap-2 self-start md:self-auto">
             <span className="rounded-full bg-white/75 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-terracotta shadow-sm">Home</span>
@@ -227,7 +224,7 @@ export default function HomePage() {
             <p className="text-xs text-brown-light">Klik een widget om hem te verplaatsen</p>
           )}
           {!editMode && (
-            <p className="text-xs text-brown-light">Pas de volgorde en uitstraling van je home-dashboard aan wanneer je wil.</p>
+            <p className="text-xs text-brown-light">Pas de volgorde van je widgets aan wanneer je wil.</p>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -383,7 +380,7 @@ function WeatherWidget() {
       <div className="bg-gradient-to-r from-sage/14 via-white/20 to-terracotta/10 px-4 pt-4 pb-3">
         <p className="text-xs font-semibold text-brown-light uppercase tracking-[0.18em]">Ruiselede — deze week</p>
       </div>
-      <div className="grid grid-cols-7 divide-x divide-white/60">
+      <div className="grid grid-cols-7 divide-x divide-white/60 overflow-x-auto">
         {weather.map((day, i) => {
           const d = new Date(day.date);
           const label = i === 0 ? "Vand." : i === 1 ? "Morg." : d.toLocaleDateString("nl-NL", { weekday: "short" }).slice(0, 2);
