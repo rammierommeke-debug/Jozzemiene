@@ -220,7 +220,7 @@ export default function SparenPage() {
                         {done && <p className="text-xs text-sage font-semibold flex items-center gap-1"><Check size={11} /> Doel bereikt!</p>}
                       </div>
                     </div>
-                    <button onClick={() => deleteGoal(goal.id)} className="opacity-0 group-hover:opacity-100 text-rose/60 hover:text-rose transition-all">
+                    <button onClick={() => deleteGoal(goal.id)} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-rose/60 hover:text-rose transition-all">
                       <Trash2 size={14} />
                     </button>
                   </div>
