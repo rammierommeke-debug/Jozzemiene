@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cream: #fdf6ec;
-  --color-warm: #f5e6d0;
+  --color-cream: #faf8f5;
+  --color-warm: #f0ebe3;
   --color-terracotta: #c2714f;
   --color-terracotta-light: #d9896a;
   --color-sage: #7a9e7e;
@@ -30,7 +30,7 @@
     background:
       radial-gradient(circle at top left, rgba(212, 132, 138, 0.16), transparent 32%),
       radial-gradient(circle at top right, rgba(122, 158, 126, 0.16), transparent 28%),
-      linear-gradient(180deg, #fffaf3 0%, #fdf6ec 46%, #f8efe3 100%);
+      linear-gradient(180deg, #fdfcfa 0%, #faf8f5 46%, #f4f0eb 100%);
     color: var(--color-brown);
     font-family: var(--font-body);
     -webkit-tap-highlight-color: transparent;

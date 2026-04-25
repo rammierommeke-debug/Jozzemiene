@@ -228,10 +228,6 @@ export default function Sidebar() {
               />
             </div>
 
-            <div className="ml-10 mt-1 flex items-center gap-1">
-              <BookMarked size={9} className="text-brown-light" />
-              <p className="text-[10px] uppercase tracking-[0.16em] text-brown-light">{config.tagline || "built to remember"}</p>
-            </div>
           </div>
 
           <div className="flex items-center gap-2">
