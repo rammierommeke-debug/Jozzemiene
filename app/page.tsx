@@ -657,7 +657,7 @@ function MailBanner({ user }: { user: "roel" | "emma" }) {
       .then(r => r.json())
       .then((cards: { id: string; to: string; created_at: string }[]) => {
         if (!Array.isArray(cards)) return;
-        const mine = cards.filter(c => c.to === user);
+        const mine = cards.filter(c => c.to?.toLowerCase() === user);
         if (mine.length === 0) return;
         const latest = mine[0];
         const seenKey = `mail_seen_${user}`;
