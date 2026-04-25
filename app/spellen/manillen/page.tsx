@@ -7,7 +7,7 @@ import Link from "next/link";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Suit = "♠" | "♥" | "♦" | "♣";
-type Value = "7" | "8" | "9" | "Z" | "D" | "H" | "A" | "M";
+type Value = "7" | "8" | "9" | "J" | "Q" | "K" | "A" | "M";
 type Phase = "choosing_trump" | "playing" | "finished";
 
 interface Card { suit: Suit; value: Value; id: string }
@@ -29,6 +29,7 @@ interface GameState {
   players: Record<Player, PlayerState>;
   trick: TrickPlay[];
   trickWinner: Player | null;
+  lastTrick: TrickPlay[] | null;
   scores: Record<Player, number>;
   tricksWon: Record<Player, number>;
   currentPlayer: Player;
@@ -43,16 +44,16 @@ interface GameState {
 
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
 const SUIT_LABEL: Record<Suit, string> = { "♠": "Schoppen", "♥": "Harten", "♦": "Ruiten", "♣": "Klaveren" };
-const VALUES: Value[] = ["7", "8", "9", "Z", "D", "H", "A", "M"];
+const VALUES: Value[] = ["7", "8", "9", "J", "Q", "K", "A", "M"];
 
 const RANK: Record<Value, number> = {
-  "7": 0, "8": 1, "9": 2, "Z": 3, "D": 4, "H": 5, "A": 6, "M": 7,
+  "7": 0, "8": 1, "9": 2, "J": 3, "Q": 4, "K": 5, "A": 6, "M": 7,
 };
 const POINTS: Record<Value, number> = {
-  "7": 0, "8": 0, "9": 0, "Z": 1, "D": 2, "H": 3, "A": 4, "M": 5,
+  "7": 0, "8": 0, "9": 0, "J": 1, "Q": 2, "K": 3, "A": 4, "M": 5,
 };
 const VLABEL: Record<Value, string> = {
-  "7": "7", "8": "8", "9": "9", "Z": "Z", "D": "D", "H": "H", "A": "A", "M": "10",
+  "7": "7", "8": "8", "9": "9", "J": "J", "Q": "Q", "K": "K", "A": "A", "M": "10",
 };
 
 function makeCard(suit: Suit, value: Value): Card { return { suit, value, id: suit + value }; }
@@ -138,6 +139,7 @@ function newGame(firstPlayer: Player): GameState {
     players: { emma, roel },
     trick: [],
     trickWinner: null,
+    lastTrick: null,
     scores: { emma: 0, roel: 0 },
     tricksWon: { emma: 0, roel: 0 },
     currentPlayer: firstPlayer,
@@ -151,7 +153,7 @@ function newGame(firstPlayer: Player): GameState {
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-const VALID_VALUES = new Set(["7","8","9","Z","D","H","A","M"]);
+const VALID_VALUES = new Set(["7","8","9","J","Q","K","A","M"]);
 function isValidGame(g: unknown): g is GameState {
   if (!g || typeof g !== "object") return false;
   const gs = g as GameState;
@@ -264,7 +266,18 @@ export default function ManillenPage() {
     try {
       const res = await fetch("/api/manillen");
       const data = await res.json();
-      setGame(isValidGame(data) ? data : null);
+      if (isValidGame(data)) {
+        setGame(prev => {
+          // Als de trick lokaal nog getoond wordt (beide kaarten zichtbaar), niet overschrijven
+          if (prev && prev.trick.length === 2 && data.trick.length === 0 &&
+              prev.trickWinner === data.trickWinner) {
+            return prev;
+          }
+          return data;
+        });
+      } else {
+        setGame(null);
+      }
     } catch {}
     setLoading(false);
   }, []);
@@ -359,8 +372,9 @@ export default function ManillenPage() {
       ...game,
       deck: newDeck,
       players: afterDraw,
-      trick: [],
+      trick: newTrick,
       trickWinner: winner,
+      lastTrick: newTrick,
       scores: newScores,
       tricksWon: newTricksWon,
       currentPlayer: winner,
@@ -368,6 +382,9 @@ export default function ManillenPage() {
       roundWinner,
       log: [`${PNAME[me]} speelt ${card.suit}${VLABEL[card.value]}`, ...game.log].slice(0, 20),
     });
+    setTimeout(() => {
+      setGame(prev => prev ? { ...prev, trick: [] } : prev);
+    }, 2500);
   }
 
   // ── Screens ───────────────────────────────────────────────────────────────
@@ -583,26 +600,38 @@ export default function ManillenPage() {
       </div>
 
       {/* ── Tafel ── */}
-      <div className="bg-warm rounded-3xl p-3 flex items-center justify-center gap-8 min-h-[100px] border border-warm/60">
+      <div className="bg-warm rounded-3xl p-3 flex flex-col items-center justify-center gap-2 min-h-[100px] border border-warm/60">
         {game.trick.length === 0 ? (
           <p className="text-sm text-brown-light text-center">
             {isMyTurn ? "Jouw beurt — kies een kaart" : `Wachten op ${PNAME[game.currentPlayer]}…`}
           </p>
         ) : (
-          ([opp, me] as Player[]).map(p => {
-            const played = game.trick.find(t => t.player === p);
-            return (
-              <div key={p} className="flex flex-col items-center gap-1">
-                <p className={`text-[10px] font-semibold ${PCOLOR[p]}`}>{PNAME[p]}</p>
-                {played
-                  ? <CardFace card={played.card} disabled isTrump={game.trump === played.card.suit} />
-                  : <div className="w-14 h-20 rounded-xl border-2 border-dashed border-warm/80 flex items-center justify-center">
-                      <span className="text-brown-light text-xs">…</span>
-                    </div>
-                }
-              </div>
-            );
-          })
+          <>
+            {game.trick.length === 2 && game.trickWinner && (
+              <p className={`text-xs font-semibold ${PCOLOR[game.trickWinner]}`}>
+                🏆 {PNAME[game.trickWinner]} wint de slag
+              </p>
+            )}
+            <div className="flex items-center justify-center gap-8">
+              {([opp, me] as Player[]).map(p => {
+                const played = game.trick.find(t => t.player === p);
+                const isWinner = game.trickWinner === p && game.trick.length === 2;
+                return (
+                  <div key={p} className="flex flex-col items-center gap-1">
+                    <p className={`text-[10px] font-semibold ${PCOLOR[p]}`}>{PNAME[p]}</p>
+                    {played
+                      ? <div className={isWinner ? "ring-2 ring-amber-400 rounded-xl" : ""}>
+                          <CardFace card={played.card} disabled isTrump={game.trump === played.card.suit} />
+                        </div>
+                      : <div className="w-14 h-20 rounded-xl border-2 border-dashed border-warm/80 flex items-center justify-center">
+                          <span className="text-brown-light text-xs">…</span>
+                        </div>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
