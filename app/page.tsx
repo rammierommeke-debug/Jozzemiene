@@ -197,6 +197,7 @@ export default function HomePage() {
 
   return (
     <div className="max-w-5xl mx-auto pt-18 md:pt-0 pb-10">
+      <MailBanner user={user} />
       {/* Edit bar */}
       <div className="soft-panel flex flex-col gap-3 mb-6 rounded-[1.75rem] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
         <div>
@@ -642,6 +643,51 @@ function DiaryWidget({ widgetId }: { widgetId: string }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// ── Mail Banner ───────────────────────────────────────────────────────────────
+
+function MailBanner({ user }: { user: "roel" | "emma" }) {
+  const [show, setShow] = useState(false);
+  const [cardId, setCardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/postcards")
+      .then(r => r.json())
+      .then((cards: { id: string; to: string; created_at: string }[]) => {
+        if (!Array.isArray(cards)) return;
+        const mine = cards.filter(c => c.to === user);
+        if (mine.length === 0) return;
+        const latest = mine[0];
+        const seenKey = `mail_seen_${user}`;
+        const seen = localStorage.getItem(seenKey);
+        if (seen !== latest.id) {
+          setCardId(latest.id);
+          setShow(true);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
+  function dismiss() {
+    if (cardId) localStorage.setItem(`mail_seen_${user}`, cardId);
+    setShow(false);
+  }
+
+  if (!show) return null;
+
+  return (
+    <Link href="/berichtjes" onClick={dismiss}
+      className="flex items-center gap-3 bg-gradient-to-r from-rose-light/60 to-terracotta/20 border border-rose/30 rounded-2xl px-4 py-3 mb-5 hover:from-rose-light/80 hover:to-terracotta/30 transition-all group">
+      <span className="text-2xl animate-bounce">🕊️</span>
+      <div className="flex-1">
+        <p className="font-display text-base text-brown">You&apos;ve got mail!</p>
+        <p className="text-xs text-brown-light">Er is een nieuw kaartje voor jou</p>
+      </div>
+      <X size={16} className="text-brown-light group-hover:text-rose transition-colors"
+        onClick={e => { e.preventDefault(); dismiss(); }} />
+    </Link>
   );
 }
 
