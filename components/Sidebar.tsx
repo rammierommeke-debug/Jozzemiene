@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Paintbrush, BookMarked, Eye, Pencil, Maximize, Minimize, Camera, Check, Loader, LogOut } from "lucide-react";
+import { Heart, Paintbrush, BookMarked, Eye, Pencil, Maximize, Minimize, Camera, Check, Loader, LogOut, MessageSquare } from "lucide-react";
 import { useTheme } from "@/lib/themeContext";
 import { getIcon } from "@/lib/iconMap";
 import { useState, useEffect, useRef } from "react";
@@ -212,54 +212,28 @@ export default function Sidebar() {
       </aside>
 
       <div className="fixed left-0 right-0 top-0 z-40 px-3 pt-3 md:hidden">
-        <div className="soft-panel flex items-center justify-between rounded-[1.75rem] border-white/60 px-4 py-3">
-          <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/70 shadow-sm">
-                <Heart className="fill-rose text-rose" size={15} />
-              </div>
-              <Image
-                src="/branding/jozzemiene-logo.png"
-                alt={brandName}
-                width={164}
-                height={48}
-                className="h-8 w-auto max-w-[150px] object-contain"
-                priority
-              />
-            </div>
-
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
-            <button
-              onClick={() => cameraRef.current?.click()}
-              disabled={camStatus === "uploading"}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/70 text-brown-light shadow-sm transition-colors hover:text-terracotta disabled:opacity-50"
-            >
-              {camStatus === "uploading" ? <Loader size={15} className="animate-spin" /> : camStatus === "done" ? <Check size={15} className="text-sage" /> : <Camera size={15} />}
-            </button>
-            <button
-              onClick={toggleFullscreen}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/70 text-brown-light shadow-sm transition-colors hover:text-terracotta"
-            >
-              {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
-            </button>
-            <Link
-              href="/feedback"
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/70 text-sm font-bold text-brown-light shadow-sm transition-colors hover:text-terracotta"
-              title="Feedback"
-            >
-              !
-            </Link>
-            <button
-              onClick={() => setPanelOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/70 text-brown-light shadow-sm transition-colors hover:text-terracotta"
-              title="Verven"
-            >
-              <Paintbrush size={15} />
-            </button>
-          </div>
+        <div className="soft-panel flex items-center justify-between rounded-[1.75rem] border-white/60 px-2 py-2">
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
+          <button onClick={() => cameraRef.current?.click()} disabled={camStatus === "uploading"}
+            className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-brown-light disabled:opacity-50">
+            {camStatus === "uploading" ? <Loader size={20} className="animate-spin" /> : camStatus === "done" ? <Check size={20} className="text-sage" /> : <Camera size={20} />}
+            <span className="text-[9px] font-semibold leading-none">Foto</span>
+          </button>
+          <button onClick={toggleFullscreen}
+            className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-brown-light">
+            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+            <span className="text-[9px] font-semibold leading-none">{isFullscreen ? "Kleiner" : "Volledig"}</span>
+          </button>
+          <Link href="/feedback"
+            className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-brown-light">
+            <MessageSquare size={20} />
+            <span className="text-[9px] font-semibold leading-none">Feedback</span>
+          </Link>
+          <button onClick={() => setPanelOpen(true)}
+            className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-1 text-brown-light">
+            <Paintbrush size={20} />
+            <span className="text-[9px] font-semibold leading-none">Thema</span>
+          </button>
         </div>
       </div>
 
