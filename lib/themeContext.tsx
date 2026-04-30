@@ -166,14 +166,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
+    // Verwijder thema opgeslagen door externe tools (bv. Codex)
     const saved = localStorage.getItem("jozzemiene-theme");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setConfig({
-          colors: { ...DEFAULT_COLORS, ...parsed.colors },
-          navItems: parsed.navItems || DEFAULT_NAV,
-        });
+        // Gooi opgeslagen thema weg als het niet het standaard terracotta thema is
+        const isDefault = !parsed.colors || parsed.colors.terracotta === DEFAULT_COLORS.terracotta;
+        if (!isDefault) {
+          localStorage.removeItem("jozzemiene-theme");
+        } else {
+          setConfig({
+            colors: { ...DEFAULT_COLORS, ...parsed.colors },
+            navItems: parsed.navItems || DEFAULT_NAV,
+          });
+        }
       } catch {}
     }
   }, []);
