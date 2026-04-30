@@ -11,7 +11,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "@types/leaflet": "^1.9.21",
+    "@types/pdf-parse": "^1.1.5",
     "adm-zip": "^0.5.17",
+    "pdf-parse": "^2.4.5",
     "date-fns": "^4.1.0",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
