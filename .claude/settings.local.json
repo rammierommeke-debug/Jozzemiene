@@ -29,7 +29,8 @@
       "Bash(gh issue *)",
       "Bash(npm run *)",
       "Bash(npm list *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(vercel --prod)"
     ]
   }
 }
