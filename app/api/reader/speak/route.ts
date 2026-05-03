@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   const voice = voiceId || "EXAVITQu4vr4xnSDxMaL"; // Sarah (default)
 
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}/stream`, {
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}/with-timestamps`, {
     method: "POST",
     headers: {
       "xi-api-key": apiKey,
@@ -32,10 +32,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err }, { status: res.status });
   }
 
-  return new NextResponse(res.body, {
-    headers: {
-      "Content-Type": "audio/mpeg",
-      "Transfer-Encoding": "chunked",
-    },
+  const data = await res.json();
+  return NextResponse.json({
+    audio_base64: data.audio_base64,
+    alignment: data.alignment,
   });
 }
