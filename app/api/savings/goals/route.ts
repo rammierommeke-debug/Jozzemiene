@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 export async function GET() {
   const { data, error } = await supabase
     .from("savings_goals")
-    .select("*, savings_entries(*)")
+    .select("*, savings_entries(*), savings_subcategories(*), savings_monthly_checks(*)")
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);

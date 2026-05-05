@@ -168,6 +168,22 @@ export default function Sidebar() {
           })}
         </nav>
 
+        {/* Decoratieve bloem */}
+        <div className="flex justify-center py-4 opacity-40 pointer-events-none select-none">
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(0 40 40)" />
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(45 40 40)" />
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(90 40 40)" />
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(135 40 40)" />
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(180 40 40)" />
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(225 40 40)" />
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(270 40 40)" />
+            <ellipse cx="40" cy="22" rx="7" ry="14" fill="#c47b5a" transform="rotate(315 40 40)" />
+            <circle cx="40" cy="40" r="10" fill="#e07b8a" />
+            <path d="M40 44 C40 44 33 39 33 34.5 C33 31.9 35.2 30 37.5 30 C38.9 30 40 31 40 31 C40 31 41.1 30 42.5 30 C44.8 30 47 31.9 47 34.5 C47 39 40 44 40 44Z" fill="white" opacity="0.5" />
+          </svg>
+        </div>
+
         <div className="p-4 border-t border-warm flex items-center justify-between">
           <p className="text-brown-light text-xs font-body">gemaakt met liefde 🌿</p>
           {session && (

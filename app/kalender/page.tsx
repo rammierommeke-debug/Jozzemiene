@@ -31,6 +31,7 @@ const CATEGORIES = [
   { key: "sport",       label: "Sport",      icon: "🏃", color: "bg-sage-light text-sage" },
   { key: "verjaardag",  label: "Verjaardag", icon: "🎂", color: "bg-yellow-100 text-yellow-600" },
   { key: "uitje",       label: "Uitstap",    icon: "✈️", color: "bg-purple-100 text-purple-500" },
+  { key: "school",      label: "School",     icon: "🎒", color: "bg-amber-100 text-amber-700" },
 ];
 
 const WERK_SUBTYPES = [
@@ -40,7 +41,7 @@ const WERK_SUBTYPES = [
 
 const PERSONS: { key: Person; color: string; dot: string }[] = [
   { key: "Emma",  color: "bg-rose text-cream",       dot: "bg-rose" },
-  { key: "Roel",  color: "bg-sage text-cream",        dot: "bg-sage" },
+  { key: "Roel",  color: "bg-purple-500 text-white",   dot: "bg-purple-500" },
   { key: "Samen", color: "bg-orange-400 text-white",  dot: "bg-orange-400" },
 ];
 
@@ -51,13 +52,38 @@ function getPersonMeta(key: Person) {
   return PERSONS.find((p) => p.key === key) ?? PERSONS[2];
 }
 
+const EMMA_COLORS: Record<string, string> = {
+  "algemeen":   "bg-green-100 text-green-700",
+  "werk":       "bg-green-300 text-green-900",
+  "werk-vroeg": "bg-green-300 text-green-900",
+  "werk-laat":  "bg-green-300 text-green-900",
+  "thuis":      "bg-emerald-100 text-emerald-700",
+  "samen":      "bg-teal-100 text-teal-700",
+  "dokter":     "bg-lime-100 text-lime-700",
+  "sport":      "bg-green-200 text-green-800",
+  "verjaardag": "bg-emerald-200 text-emerald-800",
+  "uitje":      "bg-teal-200 text-teal-800",
+  "school":     "bg-lime-200 text-lime-800",
+};
+
+const ROEL_COLORS: Record<string, string> = {
+  "algemeen":   "bg-purple-100 text-purple-700",
+  "werk":       "bg-purple-300 text-purple-900",
+  "werk-vroeg": "bg-purple-200 text-purple-800",
+  "werk-laat":  "bg-purple-400 text-purple-950",
+  "thuis":      "bg-violet-100 text-violet-700",
+  "samen":      "bg-indigo-100 text-indigo-700",
+  "dokter":     "bg-fuchsia-100 text-fuchsia-700",
+  "sport":      "bg-purple-200 text-purple-800",
+  "verjaardag": "bg-violet-200 text-violet-800",
+  "uitje":      "bg-indigo-200 text-indigo-800",
+  "school":     "bg-fuchsia-200 text-fuchsia-800",
+};
+
 function getEventChipColor(event: Event): string {
-  const isWerk = event.category === "werk" || event.category === "werk-vroeg" || event.category === "werk-laat";
-  if (isWerk) {
-    if (event.person === "Emma") return "bg-green-200 text-green-800";
-    if (event.person === "Roel") return "bg-purple-200 text-purple-700";
-  }
-  return getPersonMeta(event.person).color;
+  if (event.person === "Emma") return EMMA_COLORS[event.category] ?? EMMA_COLORS["algemeen"];
+  if (event.person === "Roel") return ROEL_COLORS[event.category] ?? ROEL_COLORS["algemeen"];
+  return "bg-orange-200 text-orange-800";
 }
 
 export default function KalenderPage() {
@@ -175,7 +201,7 @@ function KalenderInner() {
     setShareTarget(null);
   }
 
-  const startDay = startOfMonth(currentMonth).getDay();
+  const startDay = (startOfMonth(currentMonth).getDay() + 6) % 7;
   const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
 
   const selectedLabel = () => {
@@ -208,14 +234,21 @@ function KalenderInner() {
     setNewTitle(""); setNewTime("");
   }
 
-  // Category picker with werk sub-options
+  function handleSetPerson(p: Person) {
+    setNewPerson(p);
+    if (p === "Emma" && (newCategory === "werk-vroeg" || newCategory === "werk-laat")) {
+      setNewCategory("werk");
+    }
+  }
+
+  // Category picker with werk sub-options (vroeg/laat only for Roel)
   function CategoryPicker() {
     const isWerk = newCategory === "werk" || newCategory === "werk-vroeg" || newCategory === "werk-laat";
     return (
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap gap-1.5">
           {CATEGORIES.filter(c => c.key !== "werk-vroeg" && c.key !== "werk-laat").map(cat => (
-            <button key={cat.key} onClick={() => setNewCategory(cat.key === "werk" && !isWerk ? "werk-vroeg" : cat.key)}
+            <button key={cat.key} onClick={() => setNewCategory(cat.key === "werk" && !isWerk && newPerson === "Roel" ? "werk-vroeg" : cat.key)}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
                 (cat.key === "werk" && isWerk) || newCategory === cat.key
                   ? `${cat.color} border-current` : "bg-warm text-brown-light border-warm hover:bg-cream"
@@ -224,7 +257,7 @@ function KalenderInner() {
             </button>
           ))}
         </div>
-        {isWerk && (
+        {isWerk && newPerson === "Roel" && (
           <div className="flex gap-1.5 pl-1">
             <span className="text-xs text-brown-light self-center">↳</span>
             {WERK_SUBTYPES.map(sub => (
@@ -316,7 +349,7 @@ function KalenderInner() {
 
         {/* Weekdagen header */}
         <div className="grid grid-cols-7 mb-1 border-b border-warm">
-          {["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"].map((d) => (
+          {["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"].map((d) => (
             <div key={d} className="text-center text-xs font-bold text-brown-light py-2">{d}</div>
           ))}
         </div>
@@ -405,7 +438,7 @@ function KalenderInner() {
                 <CategoryPicker />
                 <div className="flex gap-2">
                   {PERSONS.map(p => (
-                    <button key={p.key} onClick={() => setNewPerson(p.key)}
+                    <button key={p.key} onClick={() => handleSetPerson(p.key)}
                       className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${newPerson === p.key ? p.color : "bg-warm text-brown-light hover:bg-cream"}`}>
                       {p.key}
                     </button>
@@ -479,7 +512,7 @@ function KalenderInner() {
                   <CategoryPicker />
                   <div className="flex gap-2">
                     {PERSONS.map(p => (
-                      <button key={p.key} onClick={() => setNewPerson(p.key)}
+                      <button key={p.key} onClick={() => handleSetPerson(p.key)}
                         className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${newPerson === p.key ? p.color + " shadow-sm" : "bg-warm text-brown-light hover:bg-cream"}`}>
                         {p.key}
                       </button>
@@ -567,7 +600,7 @@ function KalenderInner() {
 
           {/* Weekdagen */}
           <div className="grid grid-cols-7 mb-1">
-            {["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"].map((d) => (
+            {["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"].map((d) => (
               <div key={d} className="text-center text-xs font-semibold text-brown-light py-1">{d}</div>
             ))}
           </div>
@@ -706,7 +739,7 @@ function KalenderInner() {
                         >
                           <span>{cat.icon}</span> {cat.label}
                         </button>
-                        {cat.key === "werk" && (
+                        {cat.key === "werk" && newPerson === "Roel" && (
                           <div className="absolute left-0 top-full mt-1 hidden group-hover/werk:flex flex-col bg-cream border border-warm rounded-2xl shadow-lg overflow-hidden z-10 min-w-[90px]">
                             {WERK_SUBTYPES.map(sub => (
                               <button
@@ -731,7 +764,7 @@ function KalenderInner() {
                     {PERSONS.map((p) => (
                       <button
                         key={p.key}
-                        onClick={() => setNewPerson(p.key)}
+                        onClick={() => handleSetPerson(p.key)}
                         className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
                           newPerson === p.key ? p.color + " shadow-sm" : "bg-cream text-brown-light hover:bg-warm"
                         }`}
