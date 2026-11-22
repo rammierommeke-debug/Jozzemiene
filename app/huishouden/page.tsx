@@ -1,18 +1,17 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Sparkles, Plus, Trash2, Check, Pencil, X, Undo2 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { differenceInCalendarDays, format, startOfWeek } from "date-fns";
+import { Sparkles, Plus, Trash2, Check, Pencil, X, Undo2, CalendarClock } from "lucide-react";
+import { addDays, differenceInCalendarDays, format, startOfWeek } from "date-fns";
 import { nl } from "date-fns/locale";
 
 // Opgeslagen in custom_entries (slug "huishouden"), veld `data`.
-type Done = { at: string; by: string };
+type Done = { at: string; by?: string };
 type Chore = {
   title: string;
   room: string;
   every: number; // aantal dagen tussen keren
-  who: string;   // roel | emma | samen | afwisselend
+  who?: string; // niet meer gebruikt
   history: Done[]; // nieuwste eerst
 };
 type Entry = { id: string; data: Chore; created_at: string };
@@ -43,67 +42,70 @@ const FREQS: { days: number; label: string }[] = [
 ];
 const freqLabel = (d: number) => FREQS.find((f) => f.days === d)?.label ?? `Elke ${d} dagen`;
 
-const WHO: { key: string; label: string }[] = [
-  { key: "samen", label: "Samen" },
-  { key: "roel", label: "Roel" },
-  { key: "emma", label: "Emma" },
-  { key: "afwisselend", label: "Afwisselend" },
-];
-const personLabel = (k: string) => (k === "roel" ? "Roel" : k === "emma" ? "Emma" : k);
-
-const STARTERS: Omit<Chore, "history">[] = [
-  { title: "Afwas / vaatwasser", room: "keuken", every: 1, who: "afwisselend" },
-  { title: "Aanrecht & fornuis afnemen", room: "keuken", every: 3, who: "samen" },
-  { title: "Koelkast opruimen", room: "keuken", every: 14, who: "samen" },
-  { title: "Toilet poetsen", room: "badkamer", every: 7, who: "afwisselend" },
-  { title: "Douche & lavabo", room: "badkamer", every: 7, who: "afwisselend" },
-  { title: "Stofzuigen", room: "woonkamer", every: 7, who: "afwisselend" },
-  { title: "Dweilen", room: "woonkamer", every: 14, who: "samen" },
-  { title: "Afstoffen", room: "woonkamer", every: 14, who: "samen" },
-  { title: "Bed verschonen", room: "slaapkamer", every: 14, who: "samen" },
-  { title: "Was draaien", room: "was", every: 3, who: "afwisselend" },
-  { title: "Vuilnis buiten zetten", room: "buiten", every: 7, who: "afwisselend" },
-  { title: "Planten water geven", room: "overig", every: 7, who: "samen" },
-  { title: "Steelstofzuiger uitkuisen", room: "overig", every: 30, who: "samen" },
-  { title: "Robotstofzuiger uitkuisen", room: "overig", every: 30, who: "samen" },
-  { title: "Zout aanvullen", room: "keuken", every: 90, who: "samen" },
+const STARTERS: { title: string; room: string; every: number }[] = [
+  { title: "Afwas / vaatwasser", room: "keuken", every: 1 },
+  { title: "Aanrecht & fornuis afnemen", room: "keuken", every: 3 },
+  { title: "Koelkast opruimen", room: "keuken", every: 14 },
+  { title: "Toilet poetsen", room: "badkamer", every: 7 },
+  { title: "Douche & lavabo", room: "badkamer", every: 7 },
+  { title: "Stofzuigen", room: "woonkamer", every: 7 },
+  { title: "Dweilen", room: "woonkamer", every: 14 },
+  { title: "Afstoffen", room: "woonkamer", every: 14 },
+  { title: "Bed verschonen", room: "slaapkamer", every: 14 },
+  { title: "Was draaien", room: "was", every: 3 },
+  { title: "Vuilnis buiten zetten", room: "buiten", every: 7 },
+  { title: "Planten water geven", room: "overig", every: 7 },
+  { title: "Steelstofzuiger uitkuisen", room: "overig", every: 30 },
+  { title: "Robotstofzuiger uitkuisen", room: "overig", every: 30 },
+  { title: "Zout aanvullen", room: "keuken", every: 90 },
 ];
 
-const emptyForm = { title: "", room: "keuken", every: 7, who: "samen" };
+const emptyForm = { title: "", room: "keuken", every: 7 };
 
-type Status = { daysLeft: number | null; label: string; tone: "late" | "today" | "soon" | "ok" | "new" };
+type Tone = "late" | "today" | "soon" | "ok" | "new";
+type Status = { daysLeft: number | null; next: Date | null; label: string; tone: Tone };
 
 function statusOf(c: Chore, today: Date): Status {
   const last = c.history[0];
-  if (!last) return { daysLeft: null, label: "Nog nooit gedaan", tone: "new" };
-  const left = c.every - differenceInCalendarDays(today, new Date(last.at));
-  if (left < 0) return { daysLeft: left, label: `${-left} ${-left === 1 ? "dag" : "dagen"} te laat`, tone: "late" };
-  if (left === 0) return { daysLeft: 0, label: "Vandaag", tone: "today" };
-  if (left === 1) return { daysLeft: 1, label: "Morgen", tone: "soon" };
-  return { daysLeft: left, label: `Over ${left} dagen`, tone: left <= 2 ? "soon" : "ok" };
+  if (!last) return { daysLeft: null, next: null, label: "Nog nooit gedaan", tone: "new" };
+  const next = addDays(new Date(last.at), c.every);
+  const left = differenceInCalendarDays(next, today);
+  if (left < 0) return { daysLeft: left, next, label: `${-left} ${-left === 1 ? "dag" : "dagen"} te laat`, tone: "late" };
+  if (left === 0) return { daysLeft: 0, next, label: "Vandaag", tone: "today" };
+  if (left === 1) return { daysLeft: 1, next, label: "Morgen", tone: "soon" };
+  return { daysLeft: left, next, label: countdown(left), tone: left <= 2 ? "soon" : "ok" };
 }
 
-// Bij "afwisselend": wie is er aan de beurt (de ander dan wie het laatst deed).
-function turnOf(c: Chore): string | null {
-  if (c.who !== "afwisselend") return null;
-  const last = c.history[0]?.by;
-  if (last === "roel") return "emma";
-  if (last === "emma") return "roel";
-  return null;
+function countdown(days: number): string {
+  if (days < 14) return `Over ${days} dagen`;
+  if (days < 60) return `Over ${Math.round(days / 7)} weken`;
+  return `Over ${Math.round(days / 30)} maanden`;
 }
 
-const TONE: Record<Status["tone"], string> = {
+function agoLabel(at: string): string {
+  const d = differenceInCalendarDays(new Date(), new Date(at));
+  if (d <= 0) return "Vandaag";
+  if (d === 1) return "Gisteren";
+  if (d < 14) return `${d} dagen geleden`;
+  if (d < 60) return `${Math.round(d / 7)} weken geleden`;
+  return `${Math.round(d / 30)} maanden geleden`;
+}
+
+const TONE: Record<Tone, string> = {
   late: "bg-rose/15 text-rose",
   today: "bg-terracotta/15 text-terracotta",
-  soon: "bg-warm text-brown",
+  soon: "bg-terracotta-light/20 text-terracotta",
   ok: "bg-sage-light/40 text-sage",
   new: "bg-warm text-brown-light",
 };
+const NEXT_TEXT: Record<Tone, string> = {
+  late: "text-rose", today: "text-terracotta", soon: "text-terracotta", ok: "text-sage", new: "text-brown-light",
+};
+const BAR: Record<Tone, string> = {
+  late: "bg-rose", today: "bg-terracotta", soon: "bg-terracotta-light", ok: "bg-sage", new: "bg-warm",
+};
 
 export default function HuishoudenPage() {
-  const { data: session } = useSession();
-  const me = session?.user?.name === "roel" ? "roel" : "emma";
-
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -160,13 +162,13 @@ export default function HuishoudenPage() {
 
   function startEdit(e: Entry) {
     setEditId(e.id);
-    setForm({ title: e.data.title, room: e.data.room, every: e.data.every, who: e.data.who });
+    setForm({ title: e.data.title, room: e.data.room, every: e.data.every });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function markDone(e: Entry) {
-    const history = [{ at: new Date().toISOString(), by: me }, ...(e.data.history ?? [])].slice(0, 30);
+    const history = [{ at: new Date().toISOString() }, ...(e.data.history ?? [])].slice(0, 30);
     await save(e.id, { ...e.data, history });
   }
 
@@ -205,13 +207,14 @@ export default function HuishoudenPage() {
   const todo = items.filter((i) => i.s.tone === "late" || i.s.tone === "today" || i.s.tone === "new");
   const later = items.filter((i) => !todo.includes(i));
 
-  // Weekscore (maandag t/m zondag)
+  // Aantal keer afgevinkt deze week (maandag t/m zondag)
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-  const score = { roel: 0, emma: 0 };
-  for (const { e } of items)
-    for (const h of e.data.history ?? [])
-      if (new Date(h.at) >= weekStart && (h.by === "roel" || h.by === "emma")) score[h.by]++;
-  const totalWeek = score.roel + score.emma;
+  let doneWeek = 0;
+  for (const { e } of items) for (const h of e.data.history ?? []) if (new Date(h.at) >= weekStart) doneWeek++;
+
+  const row = ({ e, s }: { e: Entry; s: Status }) => (
+    <ChoreRow key={e.id} entry={e} status={s} onDone={markDone} onUndo={undoDone} onEdit={startEdit} onDelete={remove} />
+  );
 
   return (
     <div className="max-w-2xl mx-auto pt-14 md:pt-0">
@@ -234,27 +237,15 @@ export default function HuishoudenPage() {
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-rose-light/30 rounded-2xl p-4 text-center border border-warm">
             <p className="font-display text-2xl text-rose">{todo.length}</p>
-            <p className="text-xs text-brown-light">Te doen</p>
+            <p className="text-xs text-brown-light">Nu te doen</p>
+          </div>
+          <div className="bg-sage-light/30 rounded-2xl p-4 text-center border border-warm">
+            <p className="font-display text-2xl text-sage">{doneWeek}</p>
+            <p className="text-xs text-brown-light">Gedaan deze week</p>
           </div>
           <div className="bg-warm rounded-2xl p-4 text-center border border-warm">
-            <p className="font-display text-2xl text-brown">{score.roel}</p>
-            <p className="text-xs text-brown-light">Roel deze week</p>
-          </div>
-          <div className="bg-warm rounded-2xl p-4 text-center border border-warm">
-            <p className="font-display text-2xl text-brown">{score.emma}</p>
-            <p className="text-xs text-brown-light">Emma deze week</p>
-          </div>
-        </div>
-      )}
-      {totalWeek > 0 && (
-        <div className="mb-6 -mt-3">
-          <div className="h-2 rounded-full bg-warm overflow-hidden flex">
-            <div className="bg-terracotta transition-all" style={{ width: `${(score.roel / totalWeek) * 100}%` }} />
-            <div className="bg-sage transition-all" style={{ width: `${(score.emma / totalWeek) * 100}%` }} />
-          </div>
-          <div className="flex justify-between text-[11px] text-brown-light mt-1">
-            <span>Roel</span>
-            <span>Emma</span>
+            <p className="font-display text-2xl text-brown">{entries.length}</p>
+            <p className="text-xs text-brown-light">Klusjes</p>
           </div>
         </div>
       )}
@@ -279,8 +270,6 @@ export default function HuishoudenPage() {
               options={ROOMS.map((r) => ({ key: r.key, label: `${r.emoji} ${r.label}` }))} />
             <Picker label="Hoe vaak" value={String(form.every)} onChange={(v) => setForm({ ...form, every: Number(v) })}
               options={FREQS.map((f) => ({ key: String(f.days), label: f.label }))} />
-            <Picker label="Wie" value={form.who} onChange={(who) => setForm({ ...form, who })}
-              options={WHO} />
             <div className="flex gap-2 mt-1">
               <button onClick={submitForm} className="flex-1 bg-terracotta text-cream rounded-xl py-2 text-sm font-semibold hover:bg-terracotta/80">
                 {editId ? "Opslaan" : "Toevoegen"}
@@ -325,18 +314,12 @@ export default function HuishoudenPage() {
                 {todo.length === 0 ? (
                   <p className="font-handwriting text-xl text-sage text-center py-4">Alles is bij! ✨</p>
                 ) : (
-                  todo.map(({ e, s }) => (
-                    <ChoreRow key={e.id} entry={e} status={s} me={me}
-                      onDone={markDone} onUndo={undoDone} onEdit={startEdit} onDelete={remove} />
-                  ))
+                  todo.map(row)
                 )}
               </Section>
               {later.length > 0 && (
-                <Section title="Binnenkort" count={later.length}>
-                  {later.map(({ e, s }) => (
-                    <ChoreRow key={e.id} entry={e} status={s} me={me}
-                      onDone={markDone} onUndo={undoDone} onEdit={startEdit} onDelete={remove} />
-                  ))}
+                <Section title="Gepland" count={later.length}>
+                  {later.map(row)}
                 </Section>
               )}
             </div>
@@ -347,10 +330,7 @@ export default function HuishoudenPage() {
                 if (list.length === 0) return null;
                 return (
                   <Section key={r.key} title={`${r.emoji} ${r.label}`} count={list.length}>
-                    {list.map(({ e, s }) => (
-                      <ChoreRow key={e.id} entry={e} status={s} me={me}
-                        onDone={markDone} onUndo={undoDone} onEdit={startEdit} onDelete={remove} />
-                    ))}
+                    {list.map(row)}
                   </Section>
                 );
               })}
@@ -394,118 +374,106 @@ function Section({ title, count, children }: { title: string; count: number; chi
   );
 }
 
-function agoLabel(at: string): string {
-  const d = differenceInCalendarDays(new Date(), new Date(at));
-  if (d <= 0) return "Vandaag";
-  if (d === 1) return "Gisteren";
-  if (d < 7) return `${d} dagen geleden`;
-  if (d < 14) return "Vorige week";
-  if (d < 60) return `${Math.round(d / 7)} weken geleden`;
-  return `${Math.round(d / 30)} maanden geleden`;
-}
-
-const BAR: Record<Status["tone"], string> = {
-  late: "bg-rose", today: "bg-terracotta", soon: "bg-terracotta-light", ok: "bg-sage", new: "bg-warm",
-};
-
-function Avatar({ who }: { who: string }) {
-  const roel = who === "roel";
-  return (
-    <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 text-cream ${roel ? "bg-terracotta" : "bg-sage"}`}>
-      {roel ? "R" : "E"}
-    </span>
-  );
-}
-
-function LastDone({ chore, tone }: { chore: Chore; tone: Status["tone"] }) {
-  const [open, setOpen] = useState(false);
-  const history = chore.history ?? [];
-  const last = history[0];
-
-  if (!last) {
-    return (
-      <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-brown-light border border-dashed border-warm rounded-full px-2.5 py-0.5">
-        🕓 Nog nooit afgevinkt
-      </div>
-    );
-  }
-
-  const elapsed = differenceInCalendarDays(new Date(), new Date(last.at));
-  const pct = Math.min(100, Math.max(4, (elapsed / chore.every) * 100));
-  const date = new Date(last.at);
-
-  return (
-    <div className="mt-2">
-      <button onClick={() => setOpen(!open)} className="w-full text-left bg-warm/60 hover:bg-warm rounded-xl px-2.5 py-1.5 transition-colors">
-        <div className="flex items-center gap-2">
-          <Avatar who={last.by} />
-          <span className="text-xs text-brown">
-            <span className="font-semibold">{agoLabel(last.at)}</span>
-            <span className="text-brown-light"> door {personLabel(last.by)} · {format(date, "EEE d MMM", { locale: nl })}</span>
-          </span>
-          {history.length > 1 && <span className="ml-auto text-[10px] text-brown-light">{open ? "▲" : `${history.length}×`}</span>}
-        </div>
-        <div className="mt-1.5 h-1 rounded-full bg-cream overflow-hidden">
-          <div className={`h-full rounded-full ${BAR[tone]}`} style={{ width: `${pct}%` }} />
-        </div>
-      </button>
-      {open && history.length > 1 && (
-        <ul className="mt-1.5 flex flex-col gap-1 pl-1">
-          {history.slice(1, 8).map((h, i) => (
-            <li key={i} className="flex items-center gap-2 text-[11px] text-brown-light">
-              <Avatar who={h.by} />
-              {format(new Date(h.at), "EEEE d MMMM", { locale: nl })} · {personLabel(h.by)}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ChoreRow({ entry, status, me, onDone, onUndo, onEdit, onDelete }: {
-  entry: Entry; status: Status; me: string;
+function ChoreRow({ entry, status, onDone, onUndo, onEdit, onDelete }: {
+  entry: Entry; status: Status;
   onDone: (e: Entry) => void; onUndo: (e: Entry) => void; onEdit: (e: Entry) => void; onDelete: (id: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const c = entry.data;
   const room = roomOf(c.room);
-  const last = c.history?.[0];
-  const turn = turnOf(c);
-  const doneToday = last && differenceInCalendarDays(new Date(), new Date(last.at)) === 0;
-  const whoText = turn ? `${personLabel(turn)} is aan de beurt` : c.who === "afwisselend" ? "Afwisselend" : c.who === "samen" ? "Samen" : personLabel(c.who);
-  const mine = turn === me || c.who === me;
+  const history = c.history ?? [];
+  const last = history[0];
+  const doneToday = !!last && differenceInCalendarDays(new Date(), new Date(last.at)) === 0;
+  const elapsed = last ? differenceInCalendarDays(new Date(), new Date(last.at)) : 0;
+  const pct = last ? Math.min(100, Math.max(3, (elapsed / c.every) * 100)) : 100;
 
   return (
-    <div className={`bg-cream rounded-2xl px-4 py-3 border flex items-center gap-3 group ${mine && status.tone !== "ok" ? "border-terracotta/40" : "border-warm"}`}>
-      <button
-        onClick={() => (doneToday ? onUndo(entry) : onDone(entry))}
-        title={doneToday ? "Ongedaan maken" : "Gedaan!"}
-        className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${
-          doneToday ? "bg-sage border-sage text-cream" : "border-warm text-brown-light hover:border-sage hover:text-sage"
-        }`}
-      >
-        <Check size={16} />
-      </button>
+    <div className={`bg-cream rounded-2xl px-4 py-3 border group ${status.tone === "late" ? "border-rose/40" : "border-warm"}`}>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => (doneToday ? onUndo(entry) : onDone(entry))}
+          title={doneToday ? "Ongedaan maken" : "Gedaan!"}
+          className={`shrink-0 w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${
+            doneToday ? "bg-sage border-sage text-cream" : "border-warm text-brown-light hover:border-sage hover:text-sage"
+          }`}
+        >
+          <Check size={16} />
+        </button>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-base leading-none">{room.emoji}</span>
-          <p className="text-sm font-semibold text-brown">{c.title}</p>
-          <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${TONE[status.tone]}`}>{status.label}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-lg leading-none">{room.emoji}</span>
+            <p className="text-base font-semibold text-brown">{c.title}</p>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${TONE[status.tone]}`}>{status.label}</span>
+          </div>
+          <p className="text-sm text-brown-light mt-0.5">{freqLabel(c.every)} · {room.label}</p>
         </div>
-        <p className="text-xs text-brown-light mt-0.5">
-          {freqLabel(c.every)} · {whoText}
-        </p>
-        <LastDone chore={c} tone={status.tone} />
+
+        <div className="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
+          {doneToday && (
+            <button onClick={() => onUndo(entry)} title="Ongedaan maken" className="text-brown-light hover:text-brown"><Undo2 size={16} /></button>
+          )}
+          <button onClick={() => onEdit(entry)} title="Aanpassen" className="text-brown-light hover:text-brown"><Pencil size={16} /></button>
+          <button onClick={() => onDelete(entry.id)} title="Verwijderen" className="text-rose/70 hover:text-rose"><Trash2 size={16} /></button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
-        {doneToday && (
-          <button onClick={() => onUndo(entry)} title="Ongedaan maken" className="text-brown-light hover:text-brown"><Undo2 size={13} /></button>
-        )}
-        <button onClick={() => onEdit(entry)} title="Aanpassen" className="text-brown-light hover:text-brown"><Pencil size={13} /></button>
-        <button onClick={() => onDelete(entry.id)} title="Verwijderen" className="text-rose/70 hover:text-rose"><Trash2 size={13} /></button>
+      {/* Laatst gedaan  →  volgende keer */}
+      <div className="mt-3 bg-warm/50 rounded-xl px-3 py-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide font-bold text-brown-light">Laatst gedaan</p>
+            {last ? (
+              <>
+                <p className="text-lg font-semibold text-brown leading-tight">{agoLabel(last.at)}</p>
+                <p className="text-sm text-brown-light">{format(new Date(last.at), "EEE d MMM", { locale: nl })}</p>
+              </>
+            ) : (
+              <p className="text-lg text-brown-light leading-tight">Nog nooit</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-xs uppercase tracking-wide font-bold text-brown-light flex items-center justify-end gap-1">
+              <CalendarClock size={13} /> Volgende keer
+            </p>
+            {status.next ? (
+              <>
+                <p className={`text-lg font-bold capitalize leading-tight ${NEXT_TEXT[status.tone]}`}>
+                  {format(status.next, "EEEE d MMMM", { locale: nl })}
+                </p>
+                <p className={`text-sm font-semibold ${NEXT_TEXT[status.tone]}`}>{status.label}</p>
+              </>
+            ) : (
+              <p className="text-lg font-bold text-terracotta leading-tight">Zo snel mogelijk</p>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 h-2 rounded-full bg-cream overflow-hidden">
+          <div className={`h-full rounded-full ${BAR[status.tone]}`} style={{ width: `${pct}%` }} />
+        </div>
       </div>
+
+      {/* Geschiedenis */}
+      {history.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs uppercase tracking-wide font-bold text-brown-light mb-1.5">
+            Geschiedenis · {history.length}× gedaan
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {(open ? history : history.slice(0, 5)).map((h, i) => (
+              <span key={i}
+                className={`text-sm px-2.5 py-1 rounded-full border ${i === 0 ? "bg-sage-light/40 border-sage-light text-sage font-semibold" : "bg-cream border-warm text-brown"}`}>
+                ✓ {format(new Date(h.at), "d MMM yyyy", { locale: nl })}
+              </span>
+            ))}
+            {history.length > 5 && (
+              <button onClick={() => setOpen(!open)} className="text-sm px-2.5 py-1 rounded-full text-terracotta font-semibold hover:bg-warm">
+                {open ? "Minder" : `+${history.length - 5} meer`}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
