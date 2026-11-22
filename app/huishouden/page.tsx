@@ -27,6 +27,8 @@ const ROOMS: { key: string; label: string; emoji: string }[] = [
   { key: "was", label: "Was", emoji: "🧺" },
   { key: "buiten", label: "Buiten", emoji: "🌿" },
   { key: "garage", label: "Garage", emoji: "🚗" },
+  { key: "boven", label: "Boven", emoji: "⬆️" },
+  { key: "beneden", label: "Beneden", emoji: "⬇️" },
   { key: "overig", label: "Overig", emoji: "🏠" },
 ];
 const roomOf = (k: string) => ROOMS.find((r) => r.key === k) ?? ROOMS[ROOMS.length - 1];
