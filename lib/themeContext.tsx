@@ -47,6 +47,7 @@ export const DEFAULT_NAV: NavItem[] = [
   { href: "/", iconName: "Home", label: "Home" },
   { href: "/kalender", iconName: "Calendar", label: "Kalender" },
   { href: "/taken", iconName: "CheckSquare", label: "Taken" },
+  { href: "/huishouden", iconName: "Sparkles", label: "Huishouden" },
   { href: "/fotos", iconName: "Image", label: "Foto's" },
   { href: "/sparen", iconName: "PiggyBank", label: "Sparen" },
   { href: "/ideetjes", iconName: "Lightbulb", label: "Ideetjes" },
@@ -56,6 +57,9 @@ export const DEFAULT_NAV: NavItem[] = [
   { href: "/berichtjes", iconName: "Mail", label: "Lieve berichtjes" },
   { href: "/spellen", iconName: "Gamepad2", label: "Spellen" },
 ];
+
+// Tabbladen die later aan DEFAULT_NAV zijn toegevoegd
+const NEW_DEFAULTS = ["/huishouden"];
 
 export const PRESET_THEMES: { name: string; emoji: string; colors: ThemeColors }[] = [
   {
@@ -175,9 +179,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         if (!isDefault) {
           localStorage.removeItem("jozzemiene-theme");
         } else {
+          let navItems: NavItem[] = parsed.navItems || DEFAULT_NAV;
+          // Nieuwe standaard-tabbladen eenmalig toevoegen aan een eerder opgeslagen menu
+          const added: string[] = parsed.addedDefaults || [];
+          for (const href of NEW_DEFAULTS) {
+            if (added.includes(href)) continue;
+            added.push(href);
+            if (navItems.some((n) => n.href === href)) continue;
+            const item = DEFAULT_NAV.find((n) => n.href === href)!;
+            const idx = DEFAULT_NAV.indexOf(item);
+            const prev = DEFAULT_NAV[idx - 1]?.href;
+            const at = navItems.findIndex((n) => n.href === prev);
+            navItems = at >= 0 ? [...navItems.slice(0, at + 1), item, ...navItems.slice(at + 1)] : [...navItems, item];
+          }
+          const next = { ...parsed, colors: { ...DEFAULT_COLORS, ...parsed.colors }, navItems, addedDefaults: added };
+          localStorage.setItem("jozzemiene-theme", JSON.stringify(next));
           setConfig({
-            colors: { ...DEFAULT_COLORS, ...parsed.colors },
-            navItems: parsed.navItems || DEFAULT_NAV,
+            colors: next.colors,
+            navItems,
           });
         }
       } catch {}
