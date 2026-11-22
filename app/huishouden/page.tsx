@@ -391,6 +391,75 @@ function Section({ title, count, children }: { title: string; count: number; chi
   );
 }
 
+function agoLabel(at: string): string {
+  const d = differenceInCalendarDays(new Date(), new Date(at));
+  if (d <= 0) return "Vandaag";
+  if (d === 1) return "Gisteren";
+  if (d < 7) return `${d} dagen geleden`;
+  if (d < 14) return "Vorige week";
+  if (d < 60) return `${Math.round(d / 7)} weken geleden`;
+  return `${Math.round(d / 30)} maanden geleden`;
+}
+
+const BAR: Record<Status["tone"], string> = {
+  late: "bg-rose", today: "bg-terracotta", soon: "bg-terracotta-light", ok: "bg-sage", new: "bg-warm",
+};
+
+function Avatar({ who }: { who: string }) {
+  const roel = who === "roel";
+  return (
+    <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 text-cream ${roel ? "bg-terracotta" : "bg-sage"}`}>
+      {roel ? "R" : "E"}
+    </span>
+  );
+}
+
+function LastDone({ chore, tone }: { chore: Chore; tone: Status["tone"] }) {
+  const [open, setOpen] = useState(false);
+  const history = chore.history ?? [];
+  const last = history[0];
+
+  if (!last) {
+    return (
+      <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-brown-light border border-dashed border-warm rounded-full px-2.5 py-0.5">
+        🕓 Nog nooit afgevinkt
+      </div>
+    );
+  }
+
+  const elapsed = differenceInCalendarDays(new Date(), new Date(last.at));
+  const pct = Math.min(100, Math.max(4, (elapsed / chore.every) * 100));
+  const date = new Date(last.at);
+
+  return (
+    <div className="mt-2">
+      <button onClick={() => setOpen(!open)} className="w-full text-left bg-warm/60 hover:bg-warm rounded-xl px-2.5 py-1.5 transition-colors">
+        <div className="flex items-center gap-2">
+          <Avatar who={last.by} />
+          <span className="text-xs text-brown">
+            <span className="font-semibold">{agoLabel(last.at)}</span>
+            <span className="text-brown-light"> door {personLabel(last.by)} · {format(date, "EEE d MMM", { locale: nl })}</span>
+          </span>
+          {history.length > 1 && <span className="ml-auto text-[10px] text-brown-light">{open ? "▲" : `${history.length}×`}</span>}
+        </div>
+        <div className="mt-1.5 h-1 rounded-full bg-cream overflow-hidden">
+          <div className={`h-full rounded-full ${BAR[tone]}`} style={{ width: `${pct}%` }} />
+        </div>
+      </button>
+      {open && history.length > 1 && (
+        <ul className="mt-1.5 flex flex-col gap-1 pl-1">
+          {history.slice(1, 8).map((h, i) => (
+            <li key={i} className="flex items-center gap-2 text-[11px] text-brown-light">
+              <Avatar who={h.by} />
+              {format(new Date(h.at), "EEEE d MMMM", { locale: nl })} · {personLabel(h.by)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ChoreRow({ entry, status, me, onDone, onUndo, onEdit, onDelete }: {
   entry: Entry; status: Status; me: string;
   onDone: (e: Entry) => void; onUndo: (e: Entry) => void; onEdit: (e: Entry) => void; onDelete: (id: string) => void;
@@ -423,8 +492,8 @@ function ChoreRow({ entry, status, me, onDone, onUndo, onEdit, onDelete }: {
         </div>
         <p className="text-xs text-brown-light mt-0.5">
           {freqLabel(c.every)} · {whoText}
-          {last && <> · laatst {format(new Date(last.at), "d MMM", { locale: nl })} door {personLabel(last.by)}</>}
         </p>
+        <LastDone chore={c} tone={status.tone} />
       </div>
 
       <div className="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
