@@ -11,7 +11,7 @@ type Chore = {
   title: string;
   room: string;
   every: number; // aantal dagen tussen keren
-  who?: string; // niet meer gebruikt
+  who?: string; // roel | emma | samen (wiens taak)
   history: Done[]; // nieuwste eerst
 };
 type Entry = { id: string; data: Chore; created_at: string };
@@ -60,7 +60,14 @@ const STARTERS: { title: string; room: string; every: number }[] = [
   { title: "Zout aanvullen", room: "keuken", every: 90 },
 ];
 
-const emptyForm = { title: "", room: "keuken", every: 7 };
+const WHO: { key: string; label: string; cls: string }[] = [
+  { key: "samen", label: "Samen", cls: "bg-rose-light/50 text-rose border-rose-light" },
+  { key: "roel", label: "Roel", cls: "bg-terracotta/15 text-terracotta border-terracotta/30" },
+  { key: "emma", label: "Emma", cls: "bg-sage-light/50 text-sage border-sage-light" },
+];
+const whoOf = (k?: string) => WHO.find((w) => w.key === k) ?? WHO[0];
+
+const emptyForm = { title: "", room: "keuken", every: 7, who: "samen" };
 
 type Tone = "late" | "today" | "soon" | "ok" | "new";
 type Status = { daysLeft: number | null; next: Date | null; label: string; tone: Tone };
@@ -113,6 +120,7 @@ export default function HuishoudenPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [view, setView] = useState<"todo" | "ruimte">("todo");
   const [busy, setBusy] = useState(false);
+  const [person, setPerson] = useState<"alles" | "roel" | "emma">("alles");
 
   const today = new Date();
 
@@ -162,7 +170,7 @@ export default function HuishoudenPage() {
 
   function startEdit(e: Entry) {
     setEditId(e.id);
-    setForm({ title: e.data.title, room: e.data.room, every: e.data.every });
+    setForm({ title: e.data.title, room: e.data.room, every: e.data.every, who: whoOf(e.data.who).key });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -198,10 +206,11 @@ export default function HuishoudenPage() {
   const items = useMemo(
     () =>
       entries
+        .filter((e) => person === "alles" || whoOf(e.data.who).key === person || whoOf(e.data.who).key === "samen")
         .map((e) => ({ e, s: statusOf({ ...e.data, history: e.data.history ?? [] }, today) }))
         .sort((a, b) => (a.s.daysLeft ?? -999) - (b.s.daysLeft ?? -999)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [entries]
+    [entries, person]
   );
 
   const todo = items.filter((i) => i.s.tone === "late" || i.s.tone === "today" || i.s.tone === "new");
@@ -268,6 +277,8 @@ export default function HuishoudenPage() {
             />
             <Picker label="Ruimte" value={form.room} onChange={(room) => setForm({ ...form, room })}
               options={ROOMS.map((r) => ({ key: r.key, label: `${r.emoji} ${r.label}` }))} />
+            <Picker label="Van wie" value={form.who} onChange={(who) => setForm({ ...form, who })}
+              options={WHO.map((w) => ({ key: w.key, label: w.label }))} />
             <Picker label="Hoe vaak" value={String(form.every)} onChange={(v) => setForm({ ...form, every: Number(v) })}
               options={FREQS.map((f) => ({ key: String(f.days), label: f.label }))} />
             <div className="flex gap-2 mt-1">
@@ -297,7 +308,8 @@ export default function HuishoudenPage() {
       ) : (
         <>
           {/* Weergave-keuze */}
-          <div className="flex gap-1.5 mb-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
+          <div className="flex gap-1.5">
             {([["todo", "Planning"], ["ruimte", "Per ruimte"]] as const).map(([k, l]) => (
               <button key={k} onClick={() => setView(k)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
@@ -306,6 +318,17 @@ export default function HuishoudenPage() {
                 {l}
               </button>
             ))}
+          </div>
+          <div className="flex gap-1.5">
+            {([["alles", "Iedereen"], ["roel", "Roel"], ["emma", "Emma"]] as const).map(([k, l]) => (
+              <button key={k} onClick={() => setPerson(k)}
+                className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                  person === k ? "bg-terracotta text-cream" : "bg-warm text-brown-light hover:text-brown"
+                }`}>
+                {l}
+              </button>
+            ))}
+          </div>
           </div>
 
           {view === "todo" ? (
@@ -406,7 +429,12 @@ function ChoreRow({ entry, status, onDone, onUndo, onEdit, onDelete }: {
             <p className="text-base font-semibold text-brown">{c.title}</p>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${TONE[status.tone]}`}>{status.label}</span>
           </div>
-          <p className="text-sm text-brown-light mt-0.5">{freqLabel(c.every)} · {room.label}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className={`text-sm px-2.5 py-0.5 rounded-full font-bold border ${whoOf(c.who).cls}`}>
+              👤 {whoOf(c.who).label}
+            </span>
+          <span className="text-sm text-brown-light">{freqLabel(c.every)} · {room.label}</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
