@@ -40,6 +40,15 @@ const FREQS: { days: number; label: string }[] = [
   { days: 30, label: "Maandelijks" },
   { days: 90, label: "Om de 3 maanden" },
 ];
+// Groepen voor filter / onderverdeling
+const FREQ_GROUPS: { key: string; label: string; match: (d: number) => boolean }[] = [
+  { key: "dag", label: "Dagelijks", match: (d) => d <= 1 },
+  { key: "week", label: "Wekelijks", match: (d) => d > 1 && d <= 7 },
+  { key: "2week", label: "Om de 2 weken", match: (d) => d > 7 && d <= 14 },
+  { key: "maand", label: "Maandelijks", match: (d) => d > 14 && d <= 31 },
+  { key: "zelden", label: "Om de paar maanden", match: (d) => d > 31 },
+];
+const groupOf = (d: number) => FREQ_GROUPS.find((g) => g.match(d)) ?? FREQ_GROUPS[FREQ_GROUPS.length - 1];
 const freqLabel = (d: number) => FREQS.find((f) => f.days === d)?.label ?? `Elke ${d} dagen`;
 
 const STARTERS: { title: string; room: string; every: number }[] = [
@@ -118,7 +127,8 @@ export default function HuishoudenPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const [view, setView] = useState<"todo" | "ruimte">("todo");
+  const [view, setView] = useState<"todo" | "freq" | "ruimte">("todo");
+  const [freq, setFreq] = useState<string>("alles");
   const [busy, setBusy] = useState(false);
   const [person, setPerson] = useState<"alles" | "roel" | "emma">("alles");
 
@@ -206,11 +216,12 @@ export default function HuishoudenPage() {
   const items = useMemo(
     () =>
       entries
+        .filter((e) => freq === "alles" || groupOf(e.data.every).key === freq)
         .filter((e) => person === "alles" || whoOf(e.data.who).key === person || whoOf(e.data.who).key === "samen")
         .map((e) => ({ e, s: statusOf({ ...e.data, history: e.data.history ?? [] }, today) }))
         .sort((a, b) => (a.s.daysLeft ?? -999) - (b.s.daysLeft ?? -999)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [entries, person]
+    [entries, person, freq]
   );
 
   const todo = items.filter((i) => i.s.tone === "late" || i.s.tone === "today" || i.s.tone === "new");
@@ -310,9 +321,9 @@ export default function HuishoudenPage() {
           {/* Weergave-keuze */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
           <div className="flex gap-1.5">
-            {([["todo", "Planning"], ["ruimte", "Per ruimte"]] as const).map(([k, l]) => (
+            {([["todo", "Planning"], ["freq", "Per frequentie"], ["ruimte", "Per ruimte"]] as const).map(([k, l]) => (
               <button key={k} onClick={() => setView(k)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all ${
                   view === k ? "bg-brown text-cream" : "bg-warm text-brown-light hover:text-brown"
                 }`}>
                 {l}
@@ -331,7 +342,37 @@ export default function HuishoudenPage() {
           </div>
           </div>
 
-          {view === "todo" ? (
+          {/* Filter op frequentie */}
+          <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {[{ key: "alles", label: "Alles" }, ...FREQ_GROUPS].map((g) => {
+              const n = g.key === "alles" ? entries.length : entries.filter((e) => groupOf(e.data.every).key === g.key).length;
+              if (g.key !== "alles" && n === 0) return null;
+              return (
+                <button key={g.key} onClick={() => setFreq(g.key)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                    freq === g.key ? "bg-sage text-cream border-sage" : "bg-cream text-brown border-warm hover:bg-warm"
+                  }`}>
+                  {g.label} <span className="opacity-70">({n})</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {items.length === 0 ? (
+            <p className="text-brown-light text-center py-8">Geen klusjes voor deze filter.</p>
+          ) : view === "freq" ? (
+            <div className="flex flex-col gap-6">
+              {FREQ_GROUPS.map((g) => {
+                const list = items.filter((i) => groupOf(i.e.data.every).key === g.key);
+                if (list.length === 0) return null;
+                return (
+                  <Section key={g.key} title={g.label} count={list.length}>
+                    {list.map(row)}
+                  </Section>
+                );
+              })}
+            </div>
+          ) : view === "todo" ? (
             <div className="flex flex-col gap-6">
               <Section title="Nu te doen" count={todo.length}>
                 {todo.length === 0 ? (
@@ -389,8 +430,8 @@ function Section({ title, count, children }: { title: string; count: number; chi
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <p className="text-xs font-bold text-brown-light uppercase tracking-wide">{title}</p>
-        <span className="text-xs text-brown-light">({count})</span>
+        <p className="text-sm font-bold text-brown-light uppercase tracking-wide">{title}</p>
+        <span className="text-sm text-brown-light">({count})</span>
       </div>
       <div className="flex flex-col gap-2">{children}</div>
     </div>
