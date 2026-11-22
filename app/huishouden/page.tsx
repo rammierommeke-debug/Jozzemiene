@@ -185,8 +185,11 @@ export default function HuishoudenPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function markDone(e: Entry) {
-    const history = [{ at: new Date().toISOString() }, ...(e.data.history ?? [])].slice(0, 30);
+  const [asking, setAsking] = useState<Entry | null>(null);
+
+  async function markDone(e: Entry, by: string) {
+    setAsking(null);
+    const history = [{ at: new Date().toISOString(), by }, ...(e.data.history ?? [])].slice(0, 30);
     await save(e.id, { ...e.data, history });
   }
 
@@ -233,7 +236,7 @@ export default function HuishoudenPage() {
   for (const { e } of items) for (const h of e.data.history ?? []) if (new Date(h.at) >= weekStart) doneWeek++;
 
   const row = ({ e, s }: { e: Entry; s: Status }) => (
-    <ChoreRow key={e.id} entry={e} status={s} onDone={markDone} onUndo={undoDone} onEdit={startEdit} onDelete={remove} />
+    <ChoreRow key={e.id} entry={e} status={s} onDone={(x) => setAsking(x)} onUndo={undoDone} onEdit={startEdit} onDelete={remove} />
   );
 
   return (
@@ -402,6 +405,25 @@ export default function HuishoudenPage() {
           )}
         </>
       )}
+
+      {/* Wie heeft het gedaan? */}
+      {asking && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end md:items-center justify-center p-4" onClick={() => setAsking(null)}>
+          <div className="bg-cream rounded-3xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-brown-light mb-1">{roomOf(asking.data.room).emoji} {asking.data.title}</p>
+            <p className="font-display text-2xl text-brown mb-5">Wie heeft dit gedaan?</p>
+            <div className="grid grid-cols-3 gap-2">
+              {WHO.slice(1).concat(WHO[0]).map((w) => (
+                <button key={w.key} onClick={() => markDone(asking, w.key)}
+                  className={`py-4 rounded-2xl text-base font-bold border-2 transition-transform active:scale-95 ${w.cls}`}>
+                  {w.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setAsking(null)} className="mt-4 w-full py-2 text-sm text-brown-light hover:text-brown">Annuleren</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -495,7 +517,10 @@ function ChoreRow({ entry, status, onDone, onUndo, onEdit, onDelete }: {
             {last ? (
               <>
                 <p className="text-lg font-semibold text-brown leading-tight">{agoLabel(last.at)}</p>
-                <p className="text-sm text-brown-light">{format(new Date(last.at), "EEE d MMM", { locale: nl })}</p>
+                <p className="text-sm text-brown-light">
+                  {format(new Date(last.at), "EEE d MMM", { locale: nl })}
+                  {last.by && <> · door <span className="font-semibold text-brown">{whoOf(last.by).label}</span></>}
+                </p>
               </>
             ) : (
               <p className="text-lg text-brown-light leading-tight">Nog nooit</p>
@@ -532,7 +557,7 @@ function ChoreRow({ entry, status, onDone, onUndo, onEdit, onDelete }: {
             {(open ? history : history.slice(0, 5)).map((h, i) => (
               <span key={i}
                 className={`text-sm px-2.5 py-1 rounded-full border ${i === 0 ? "bg-sage-light/40 border-sage-light text-sage font-semibold" : "bg-cream border-warm text-brown"}`}>
-                ✓ {format(new Date(h.at), "d MMM yyyy", { locale: nl })}
+                ✓ {format(new Date(h.at), "d MMM yyyy", { locale: nl })}{h.by && <> · <b>{whoOf(h.by).label}</b></>}
               </span>
             ))}
             {history.length > 5 && (
